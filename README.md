@@ -18,7 +18,7 @@ This repository contains the canonical product specifications for Nexus, organiz
 | `specs/product/ui-cli.md` | Minimal UI and CLI/plugin contracts. |
 | `specs/domain/model.md` | Domain entities, relationships, enums, states, visibility model. |
 | `specs/data/schema.dbml` | Database model in DBML. |
-| `specs/security/authorization.md` | Roles, effective permissions, token limits, read/write/review rules. |
+| `specs/security/authorization.md` | Roles, effective permissions, auth session limits, read/write/review rules. |
 | `specs/security/security-observability-audit.md` | Security, privacy, audit, logs, and metrics. |
 | `specs/api/rest-api.md` | REST endpoints and request/response contracts. |
 | `specs/search/search-and-context-packs.md` | PostgreSQL FTS search and context pack behavior. |
@@ -26,7 +26,7 @@ This repository contains the canonical product specifications for Nexus, organiz
 | `specs/implementation/repository-structure.md` | Recommended FastAPI repository layout. |
 | `specs/implementation/testing.md` | Mandatory test coverage and invariants. |
 | `specs/implementation/spec-driven-development.md` | Rules for maintaining the project from specs. |
-| `specs/implementation/open-questions.md` | Explicit gaps that need product or technical decisions. |
+| `specs/implementation/open-questions.md` | Resolved implementation decisions and any future open gaps. |
 | `specs/implementation/ai-implementation-prompt.md` | Implementation prompt for an AI coding agent. |
 | `specs/features/*.feature` | Behavior specs in Gherkin. |
 | `specs/traceability/project-brief-coverage.md` | Coverage map proving the original brief was decomposed into specs. |
@@ -36,7 +36,7 @@ This repository contains the canonical product specifications for Nexus, organiz
 
 | Principle | Requirement |
 | --- | --- |
-| Memory entry is the primary unit | Do not require sessions, messages, repositories, or batches. |
+| Memory entry is the primary unit | Do not require AI/source sessions, messages, repositories, or batches as memory resources. |
 | Users are permission actors | AI tools act on behalf of users and are recorded as source tools. |
 | API is the only entry point | No client may access PostgreSQL, vector stores, or search indexes directly. |
 | PostgreSQL is source of truth | Future vector stores are derived indexes only. |
@@ -65,7 +65,8 @@ This repository contains the canonical product specifications for Nexus, organiz
 | Module | Responsibility |
 | --- | --- |
 | `identity` | Organizations, users, and org memberships. |
-| `auth_tokens` | Personal API tokens for CLI/plugin access. |
+| `auth` | OIDC login, CLI browser SSO, auth sessions, access JWT validation, refresh rotation. |
+| `admin` | Organization users, roles, groups, projects, and memberships. |
 | `groups` | Groups, teams, and memberships. |
 | `projects` | Projects, ownership, memberships, and timeline. |
 | `authorization` | Effective roles, policies, and readable memory query. |
@@ -89,7 +90,7 @@ The product is functional when:
 | Audit | Sensitive operations and denied authorizations create audit events. |
 | Source of truth | PostgreSQL is the only source of truth. |
 | AI boundary | The API never calls an LLM in the product. |
-| Tests | Permission, review, search, context pack, token, and audit invariants are automated. |
+| Tests | Permission, review, search, context pack, session, admin, error, and audit invariants are automated. |
 
 ## Working From Specs
 

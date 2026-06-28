@@ -66,6 +66,7 @@ readable_memory_entries(actor) + full text search
 | `statuses` | Restrict by allowed statuses. Hidden statuses require explicit authorized mode. |
 | `tags` | Restrict by tags. |
 | `limit` | Limit result count. |
+| `cursor` | Continue from a previous search page using the common opaque cursor contract. |
 | `include_evidence` | Include evidence details or counts according to response schema. |
 
 ## Default Search Statuses
@@ -160,6 +161,8 @@ A client may call `POST /v1/context-packs` before starting a task. The AI tool m
 ## Project Timeline
 
 Project timeline returns project-related events such as memory creation and approval. It must only include memory the actor is authorized to read. It should use audit events and memory metadata as the event source.
+
+Timeline responses use the common cursor pagination contract from `../api/rest-api.md` with ordering `timestamp desc, id desc`.
 
 ## Future Semantic Search Rules
 

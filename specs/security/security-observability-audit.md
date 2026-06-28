@@ -7,9 +7,9 @@
 | TLS | Use TLS in transit. |
 | Encryption at rest | Use PostgreSQL/storage encryption if infrastructure offers it. |
 | Secret management | Keep secrets out of the repository. |
-| Token storage | Store token hashes only, never raw tokens. |
+| Credential storage | Store refresh token hashes only; never store raw access or refresh tokens. |
 | Soft delete | Use soft delete for memory entries. |
-| Sensitive changes | Audit visibility, review, grants, denial, token lifecycle, search, and context pack generation. |
+| Sensitive changes | Audit visibility, review, grants, denial, session lifecycle, admin mutations, search, and context pack generation. |
 | Default private | New entries default to private visibility. |
 | Org isolation | Use `org_id` in tenant-owned tables. |
 | Cross-org safety | Use composite foreign keys where practical. |
@@ -40,11 +40,20 @@
 | `memory_entry.marked_needs_review` | Memory marked needs review. |
 | `memory_entry.deprecated` | Memory deprecated. |
 | `memory_entry.archived` | Memory archived. |
+| `memory_entry.deleted` | Memory soft-deleted. |
 | `search.executed` | Search executed. |
 | `context_pack.generated` | Context pack generated. |
 | `authorization.denied` | Access denied. |
-| `token.created` | Token created. |
-| `token.revoked` | Token revoked. |
+| `auth.session.created` | Auth session created after OIDC login. |
+| `auth.session.refreshed` | Refresh token rotated and access token issued. |
+| `auth.session.revoked` | Auth session revoked. |
+| `auth.refresh_reuse_detected` | Used refresh token was reused and session was revoked. |
+| `admin.user_changed` | User record created or changed. |
+| `admin.org_membership_changed` | Organization role changed. |
+| `admin.group_changed` | Group created or changed. |
+| `admin.group_membership_changed` | Group membership changed. |
+| `admin.project_changed` | Project created or changed. |
+| `admin.project_membership_changed` | Project membership changed. |
 
 ## Audit Event Data
 
@@ -54,7 +63,7 @@ Each audit event includes:
 | --- | --- |
 | `org_id` | Required organization. |
 | `actor_user_id` | Acting user if known. |
-| `actor_token_id` | Token if request used a personal API token. |
+| `actor_session_id` | Auth session id when request is authenticated. |
 | `action` | Event name. |
 | `resource_type` | Resource type when applicable. |
 | `resource_id` | Resource ID when applicable. |
@@ -70,7 +79,7 @@ Each audit event includes:
 
 | Rule | Requirement |
 | --- | --- |
-| No raw tokens | Never audit raw tokens. |
+| No raw credentials | Never audit raw access tokens, refresh tokens, authorization codes, or device codes. |
 | No full secret-bearing bodies | Do not audit complete request bodies that may contain secrets. |
 | No raw search queries by default | Store query hash and metadata. |
 | Denials audited | Every authorization denial creates an event. |
@@ -84,7 +93,7 @@ Each request log should include:
 | --- | --- |
 | Request ID | Correlation ID. |
 | Actor user ID | When authenticated. |
-| Token ID | When API token is used. |
+| Session ID | When request is authenticated. |
 | Org ID | Tenant context. |
 | Endpoint | Route/method. |
 | Latency | Request duration. |
@@ -94,7 +103,7 @@ Do not log:
 
 | Data | Reason |
 | --- | --- |
-| Tokens | Credential leakage. |
+| Access tokens, refresh tokens, authorization codes, device codes | Credential leakage. |
 | Full request bodies | May contain secrets or proprietary memory. |
 | Raw search queries | May contain secrets unless policy permits. |
 
@@ -108,8 +117,9 @@ Do not log:
 | Search latency | Search performance. |
 | Context pack latency | Context pack performance. |
 | Audit write failures | Audit reliability. |
-| Token authentication failures | Security monitoring. |
+| Auth/session failures | Security monitoring. |
 | Authorization denied count | Permission/security monitoring. |
+| Refresh token reuse count | Credential compromise detection. |
 
 ## Product Metrics
 

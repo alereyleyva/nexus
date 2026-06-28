@@ -95,7 +95,9 @@ Result groups:
 
 | Responsibility | Requirement |
 | --- | --- |
-| Authenticate | Use personal API token. |
+| Authenticate | Use `nexus login` with browser SSO. |
+| Store credentials safely | Store refresh credentials in OS keychain or safest platform storage available. |
+| Refresh credentials | Use `/v1/auth/session/refresh`; do not require long-lived static credentials. |
 | Capture memory | Collect memory proposed by AI or user. |
 | Send structured entries | Use memory entry API contract. |
 | Include source tool | Always set `source_tool`. |
@@ -108,6 +110,7 @@ Result groups:
 Example future command:
 
 ```sh
+nexus login
 nexus memory add \
   --project CECW \
   --type decision \
@@ -123,6 +126,7 @@ nexus memory add \
 Example context pack command:
 
 ```sh
+nexus login
 nexus context-pack \
   --project CECW \
   --task "Continue payment sync retry implementation" \
@@ -136,5 +140,5 @@ nexus context-pack \
 | API-only | UI/CLI/plugin must use the API. |
 | No direct DB | Clients must not access PostgreSQL directly. |
 | No direct vector store | Future vector stores stay behind the API. |
-| User token | CLI/plugin acts as user through personal token. |
+| User session | CLI/plugin acts as user through short-lived Nexus session credentials. |
 | No hidden activation | Shared memory responses may require review. |

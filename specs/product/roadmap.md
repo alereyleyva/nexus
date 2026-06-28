@@ -29,9 +29,10 @@ Estimated duration: 1 week.
 | Projects | Owning group required. |
 | Project memberships | Explicit roles. |
 | Effective project roles | Highest role resolution. |
-| User API tokens | Personal token auth. |
+| OIDC auth sessions | Google OIDC first, generic IdP-ready adapter, short-lived access tokens, refresh rotation. |
 | ActorContext | Request identity model. |
 | AuthorizationService | Core policies and readable query. |
+| Admin API | Users, org memberships, groups, group memberships, projects, and project memberships. |
 | Tests | Base permission tests. |
 
 ## Phase 2: Memory Entries And Review
@@ -69,7 +70,7 @@ Estimated duration: 1 week.
 
 | Deliverable | Requirement |
 | --- | --- |
-| Token config | Store/use personal token. |
+| Login | `nexus login` browser SSO and short-lived session credential storage. |
 | Create memory | CLI create command. |
 | Bulk upload | CLI bulk command. |
 | Search | CLI search. |

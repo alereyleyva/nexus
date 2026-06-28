@@ -1,27 +1,27 @@
-# Open Questions
+# Resolved Implementation Decisions
 
-The original brief is strong on memory, authorization, search, context packs, audit, and architecture. The items below are intentionally listed as unresolved so implementers do not invent hidden product decisions.
+The original brief left several implementation questions open so implementers would not invent hidden product behavior. The questions below are now resolved and linked to the canonical specs that define the behavior.
 
-## Open Contract Gaps
+There are no known blocking open questions as of 2026-06-28.
 
-| ID | Question | Why it matters | Current guidance |
-| --- | --- | --- | --- |
-| OQ-001 | What are the exact admin endpoints for organizations, users, groups, projects, and memberships? | The data model requires these entities, but the REST endpoint list focuses on memory/search/context/timeline. | Implement minimal internal seed/admin tooling only if needed, or define admin API before building UI flows. |
-| OQ-002 | How are user JWTs issued and validated? | The brief requires JWT auth but does not define issuer, claims, or login flow. | Treat JWT verification as an adapter boundary; do not build full SSO unless specified. |
-| OQ-003 | What is the API endpoint for creating/revoking personal API tokens? | Token audit events are specified, but endpoint contracts are not. | Define token management endpoints before implementing CLI onboarding. |
-| OQ-004 | What is the pagination format for list/search/timeline endpoints? | Search and timeline can grow large. | Use a simple `limit` first; add cursor contract only after specification. |
-| OQ-005 | What status codes and error envelope should the API use? | Clients need stable error handling. | Define one error envelope before implementation. |
-| OQ-006 | Should review queue have a dedicated endpoint? | UI needs pending review lists, but the endpoint is not listed. | Add a review endpoint spec before building UI Review Queue. |
-| OQ-007 | What exact rules apply to editing active shared memory by owners without approval rights? | The brief recommends behavior but leaves room for policy choice. | Prefer moving to `pending_review` when edit expands or materially changes shared active memory without approval rights. |
-| OQ-008 | What endpoint archives or soft-deletes memory? | The service responsibilities mention archive/soft delete, but endpoint contracts are absent. | Define explicit archive/delete endpoint before implementing external clients. |
-| OQ-009 | Is `org_admin` allowed to configure projects and memberships without knowledge approval powers? | The brief separates `org_admin` from `knowledge_admin`, but admin API details are open. | Keep read access to private memory denied; define admin mutation permissions separately. |
-| OQ-010 | Should `confidence` have validation range 0..1? | The DB type implies numeric precision but not a check. | Add check `confidence is null or confidence between 0 and 1` if implementation wants stricter safety. |
-| OQ-011 | Should `source_tool` be free text or controlled enum? | Examples include Codex/OpenCode/Cursor/ChatGPT, but future tools are expected. | Keep free text; normalize later only if needed. |
-| OQ-012 | Should raw search query auditing ever be enabled? | Queries may contain secrets. | Default to query hash only. Raw query logging requires explicit policy. |
-| OQ-013 | Which language config should PostgreSQL FTS use? | Content may be Spanish and English. | Use `simple` as specified; revisit after real corpus analysis. |
-| OQ-014 | How should API clients render context packs as Markdown? | The API returns structured JSON and does not call LLMs. | Markdown rendering belongs in CLI/UI clients, not API. |
-| OQ-015 | Should there be an explicit healthcheck endpoint? | Roadmap requires healthcheck but API contract does not list it. | Add `GET /health` or similar in bootstrap spec before implementation. |
+| ID | Decision | Canonical spec |
+| --- | --- | --- |
+| OQ-001 | Provide organization admin APIs for users, org memberships, groups, group memberships, projects, and project memberships. These endpoints back the UI configuration flows. | `../api/rest-api.md`, `../security/authorization.md` |
+| OQ-002 | Use OIDC SSO to issue Nexus auth sessions. Google is the first provider; generic OIDC IdP support must fit behind the provider adapter. Nexus issues short-lived access JWTs and rotated opaque refresh tokens. | `../../docs/adr/0010-oidc-short-lived-user-sessions.md`, `../api/rest-api.md`, `../security/authorization.md` |
+| OQ-003 | Do not build long-lived static user credentials in v1. CLI uses `nexus login` with browser SSO and short-lived session credentials. | `../../docs/adr/0010-oidc-short-lived-user-sessions.md`, `../product/ui-cli.md` |
+| OQ-004 | Use keyset cursor pagination for list/search/timeline/review/admin endpoints: `limit`, opaque `cursor`, `page.next_cursor`, `page.has_more`, no `total_count` in v1. | `../api/rest-api.md` |
+| OQ-005 | Use one scalable API error envelope based on Problem Details with stable `code`, `request_id`, optional `errors`, and documented status-code mapping. | `../../docs/adr/0011-api-error-contract.md`, `../api/rest-api.md` |
+| OQ-006 | Add `GET /v1/review-queue` for pending and explicitly requested `needs_review` items that the actor can review. | `../api/rest-api.md` |
+| OQ-007 | Active approved shared memory stays `active` when edited by an actor with control over that memory. Non-controllers are denied and should create a new proposal instead. | `../security/authorization.md`, `../api/rest-api.md` |
+| OQ-008 | Add `POST /v1/memory-entries/{id}/archive` and `DELETE /v1/memory-entries/{id}`. Archive is normal for active shared memory; delete is soft delete for eligible private/restricted memory or pending proposal withdrawal. | `../api/rest-api.md`, `../security/authorization.md` |
+| OQ-009 | `org_admin` can configure organization structure and memberships but does not read private memory or approve organization memory unless also authorized by normal memory rules or `knowledge_admin`. | `../security/authorization.md`, `../api/rest-api.md` |
+| OQ-010 | `confidence` must be null or between 0 and 1. | `../domain/model.md`, `../data/schema.dbml`, `../api/rest-api.md` |
+| OQ-011 | `source_tool` remains free text to support new tools without migrations. | `../domain/model.md` |
+| OQ-012 | Raw search query auditing is disabled by default. Store query hash and safe metadata only unless an explicit internal policy later allows raw query logging. | `../search/search-and-context-packs.md`, `../security/security-observability-audit.md` |
+| OQ-013 | PostgreSQL FTS uses the `simple` configuration initially because content may mix Spanish and English. | `../search/search-and-context-packs.md` |
+| OQ-014 | Context pack Markdown rendering belongs in CLI/UI clients. The API returns structured JSON and does not call LLMs. | `../api/rest-api.md`, `../product/ui-cli.md` |
+| OQ-015 | Add unauthenticated healthcheck endpoints: `GET /health`, `GET /health/live`, and `GET /health/ready`. | `../api/rest-api.md`, `../product/roadmap.md` |
 
 ## Decision Rule
 
-If implementation requires one of these questions, first update the relevant spec and add an ADR when the decision has architectural, security, or long-term maintenance impact.
+If implementation reveals a new ambiguity, update the relevant spec first and add an ADR when the decision has architectural, security, or long-term maintenance impact.

@@ -25,7 +25,7 @@ Before coding, read:
 - docs/adr/*.md
 
 Core architectural decisions:
-- Do not model sessions as mandatory resources.
+- Do not model AI/source conversation sessions as mandatory memory resources. Auth sessions are required for login.
 - Do not create an Agent entity in the product.
 - Do not create a Repository entity.
 - Do not create capture batches.
@@ -52,7 +52,8 @@ Tech stack:
 
 Core modules:
 - identity
-- auth_tokens
+- auth
+- admin
 - authorization
 - groups
 - projects
@@ -69,7 +70,8 @@ Tables:
 - group_memberships
 - projects
 - project_memberships
-- user_api_tokens
+- auth_sessions
+- auth_refresh_tokens
 - memory_entries
 - memory_entry_grants
 - memory_entry_evidence
@@ -115,23 +117,45 @@ Permission rules:
 - Project reviewers and maintainers can approve project-scoped entries.
 - Group leads can approve group-scoped entries.
 - Knowledge admins can approve organization-scoped entries.
-- CLI tokens act on behalf of users and cannot exceed the user's permissions.
+- CLI sessions act on behalf of users and cannot exceed the user's permissions.
 - Search, context packs, timeline, and detail endpoints must all use the same readable memory query.
 - Pending, rejected, deprecated, and archived entries are hidden from normal search/context packs unless explicitly requested by an authorized reviewer/admin.
 - Every visibility change, approval, rejection, grant change, denied authorization, search, and context pack generation must be audited.
+- Every API error must use the common Problem Details envelope.
 
 Endpoints:
+- GET /health
+- GET /health/live
+- GET /health/ready
+- GET /v1/auth/providers
+- POST /v1/auth/cli/authorizations
+- GET /v1/auth/cli/authorizations/{user_code}
+- GET /v1/auth/oidc/{provider}/authorize
+- GET /v1/auth/oidc/{provider}/callback
+- POST /v1/auth/cli/token
+- POST /v1/auth/session/refresh
+- POST /v1/auth/session/revoke
+- GET /v1/auth/me
+- GET /v1/auth/sessions
+- DELETE /v1/auth/sessions/{session_id}
+- GET /v1/memory-entries
 - POST /v1/memory-entries
 - POST /v1/memory-entries:bulk
 - GET /v1/memory-entries/{id}
 - PATCH /v1/memory-entries/{id}
 - POST /v1/memory-entries/{id}/review
+- POST /v1/memory-entries/{id}/mark-needs-review
+- POST /v1/memory-entries/{id}/deprecate
+- POST /v1/memory-entries/{id}/archive
+- DELETE /v1/memory-entries/{id}
 - PATCH /v1/memory-entries/{id}/visibility
 - POST /v1/memory-entries/{id}/grants
 - DELETE /v1/memory-entries/{id}/grants/{grant_id}
+- GET /v1/review-queue
 - POST /v1/search
 - POST /v1/context-packs
 - GET /v1/projects/{project_id}/timeline
+- GET/POST/PATCH/PUT/DELETE /v1/admin/* endpoints from specs/api/rest-api.md
 
 Testing requirements:
 - User cannot read entries from another org.
@@ -139,7 +163,10 @@ Testing requirements:
 - User cannot read project entries without effective project access.
 - User cannot read group entries without group membership.
 - User cannot read restricted entries without explicit grant.
-- CLI token cannot exceed user permissions.
+- CLI session cannot exceed user permissions.
+- Revoked sessions cannot authenticate or refresh.
+- Refresh token reuse revokes the session.
+- API errors use the common Problem Details envelope.
 - Search never returns unauthorized entries.
 - Context packs never return unauthorized entries.
 - Contributor can submit project memory but not approve it.

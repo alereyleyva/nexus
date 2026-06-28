@@ -39,7 +39,7 @@ If sources conflict, update the relevant spec and add or amend an ADR. Do not si
 | `product/ui-cli.md` | Minimal UI views and CLI/plugin responsibilities. |
 | `domain/model.md` | Entities, relationships, roles, memory types, statuses, visibility, source context. |
 | `data/schema.dbml` | Physical database model in DBML including tables, enums, relationships, and indexes. |
-| `security/authorization.md` | Actor model, token model, role derivation, read/create/review/update rules. |
+| `security/authorization.md` | Actor model, auth session model, role derivation, read/create/review/update rules. |
 | `security/security-observability-audit.md` | Security controls, audit events, logs, metrics, and privacy rules. |
 | `api/rest-api.md` | REST endpoints, payload examples, default behavior, audit expectations. |
 | `search/search-and-context-packs.md` | Full text search, ranking, safe filtering, context packs, project timeline. |
@@ -47,7 +47,7 @@ If sources conflict, update the relevant spec and add or amend an ADR. Do not si
 | `implementation/internal-services.md` | Auth, authorization, memory, search, context pack, and audit service responsibilities. |
 | `implementation/testing.md` | Required test classes and invariant list. |
 | `implementation/spec-driven-development.md` | Process for keeping code, tests, specs, and ADRs aligned. |
-| `implementation/open-questions.md` | Explicitly unresolved decisions. |
+| `implementation/open-questions.md` | Resolved implementation decisions and future open gaps. |
 | `implementation/ai-implementation-prompt.md` | Prompt for coding agents. |
 | `traceability/project-brief-coverage.md` | Coverage map for the decomposed source brief. |
 
@@ -55,7 +55,7 @@ If sources conflict, update the relevant spec and add or amend an ADR. Do not si
 
 | File | Behavior area |
 | --- | --- |
-| `features/auth_and_tokens.feature` | Authentication, token scopes, token limits. |
+| `features/auth_and_sessions.feature` | Authentication, session capabilities, refresh rotation, session limits. |
 | `features/effective_project_roles.feature` | Project role derivation and precedence. |
 | `features/memory_creation_and_review.feature` | Creation, initial status, review, state transitions. |
 | `features/memory_read_authorization.feature` | Read authorization by visibility scope and status. |
@@ -85,7 +85,7 @@ Use these labels in issues, PRs, commits, or test names when possible:
 | --- | --- |
 | `SPEC-PRODUCT` | Product behavior or acceptance criteria. |
 | `SPEC-DOMAIN` | Entity, enum, state, or relationship behavior. |
-| `SPEC-AUTHZ` | Permission, token, role, or visibility behavior. |
+| `SPEC-AUTHZ` | Permission, auth session, role, or visibility behavior. |
 | `SPEC-API` | Endpoint contract behavior. |
 | `SPEC-SEARCH` | Search, ranking, or context pack behavior. |
 | `SPEC-AUDIT` | Audit, logging, observability, or security behavior. |

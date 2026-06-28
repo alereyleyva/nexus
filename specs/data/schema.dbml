@@ -74,6 +74,12 @@ Enum source_kind {
   future_integration
 }
 
+Enum auth_client_type {
+  web
+  cli
+  future_integration
+}
+
 Enum grant_role {
   viewer
   editor
@@ -208,25 +214,49 @@ Table project_memberships {
   }
 }
 
-Table user_api_tokens {
+Table auth_sessions {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   org_id uuid [not null]
   user_id uuid [not null]
-  name text [not null]
-  token_hash text [not null, unique]
-  scopes "text[]" [not null, default: `'{}'`]
-  max_visibility_scope visibility_scope [not null, default: 'project']
-  expires_at timestamptz
+  provider text [not null]
+  provider_subject text [not null]
+  client_type auth_client_type [not null]
+  client_name text
+  capabilities "text[]" [not null, default: `'{}'`]
+  max_visibility_scope visibility_scope
+  expires_at timestamptz [not null]
   revoked_at timestamptz
   last_used_at timestamptz
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
 
   indexes {
-    token_hash [unique, name: 'user_api_tokens_token_hash_unique']
+    (org_id, id) [unique, name: 'auth_sessions_org_id_unique']
+    (org_id, user_id) [name: 'auth_sessions_user_idx']
+    (org_id, provider, provider_subject) [name: 'auth_sessions_provider_subject_idx']
+    (org_id, revoked_at, expires_at) [name: 'auth_sessions_lifecycle_idx']
   }
 
-  Note: 'Personal token used by CLI/plugin. It acts on behalf of a user and restricts permissions; it never expands user permissions.'
+  Note: 'Revocable user session created by OIDC login. Capabilities and max_visibility_scope restrict permissions; they never expand user permissions.'
+}
+
+Table auth_refresh_tokens {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  session_id uuid [not null]
+  token_hash text [not null, unique]
+  parent_token_id uuid
+  expires_at timestamptz [not null]
+  used_at timestamptz
+  revoked_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    token_hash [unique, name: 'auth_refresh_tokens_token_hash_unique']
+    (org_id, session_id) [name: 'auth_refresh_tokens_session_idx']
+  }
+
+  Note: 'Opaque refresh token storage. Store only hashes. Tokens are single-use and rotated on refresh.'
 }
 
 Table memory_entries {
@@ -235,7 +265,7 @@ Table memory_entries {
   project_id uuid
   owner_user_id uuid [not null]
   created_by_user_id uuid [not null]
-  submitted_via_token_id uuid
+  submitted_via_session_id uuid
   type memory_type [not null]
   title text [not null]
   body text [not null]
@@ -275,7 +305,7 @@ Table memory_entries {
     (org_id, created_by_user_id, source_tool, client_entry_id) [unique, name: 'memory_entries_client_entry_id_unique', note: 'Partial unique index where client_entry_id is not null.']
   }
 
-  Note: 'Constraints to implement in migrations: group visibility requires visibility_group_id; non-group visibility requires visibility_group_id null; project visibility requires project_id; confidence should be null or between 0 and 1 if strict validation is enabled.'
+  Note: 'Constraints to implement in migrations: group visibility requires visibility_group_id; non-group visibility requires visibility_group_id null; project visibility requires project_id; confidence must be null or between 0 and 1.'
 }
 
 Table memory_entry_grants {
@@ -318,7 +348,7 @@ Table audit_events {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   org_id uuid [not null]
   actor_user_id uuid
-  actor_token_id uuid
+  actor_session_id uuid
   action text [not null]
   resource_type text
   resource_id uuid
@@ -335,7 +365,7 @@ Table audit_events {
     (org_id, resource_type, resource_id) [name: 'audit_events_resource_idx']
   }
 
-  Note: 'Audit metadata must not store raw tokens, secret-bearing request bodies, or raw search queries by default.'
+  Note: 'Audit metadata must not store raw access/refresh tokens, secret-bearing request bodies, or raw search queries by default.'
 }
 
 Ref: users.org_id > organizations.id
@@ -356,14 +386,17 @@ Ref: project_memberships.org_id > organizations.id
 Ref: project_memberships.(org_id, project_id) > projects.(org_id, id)
 Ref: project_memberships.(org_id, user_id) > users.(org_id, id)
 
-Ref: user_api_tokens.org_id > organizations.id
-Ref: user_api_tokens.(org_id, user_id) > users.(org_id, id)
+Ref: auth_sessions.org_id > organizations.id
+Ref: auth_sessions.(org_id, user_id) > users.(org_id, id)
+Ref: auth_refresh_tokens.org_id > organizations.id
+Ref: auth_refresh_tokens.(org_id, session_id) > auth_sessions.(org_id, id)
+Ref: auth_refresh_tokens.parent_token_id > auth_refresh_tokens.id
 
 Ref: memory_entries.org_id > organizations.id
 Ref: memory_entries.(org_id, project_id) > projects.(org_id, id)
 Ref: memory_entries.(org_id, owner_user_id) > users.(org_id, id)
 Ref: memory_entries.(org_id, created_by_user_id) > users.(org_id, id)
-Ref: memory_entries.submitted_via_token_id > user_api_tokens.id
+Ref: memory_entries.(org_id, submitted_via_session_id) > auth_sessions.(org_id, id)
 Ref: memory_entries.(org_id, visibility_group_id) > groups.(org_id, id)
 Ref: memory_entries.(org_id, reviewed_by_user_id) > users.(org_id, id)
 
@@ -377,4 +410,4 @@ Ref: memory_entry_evidence.(org_id, memory_entry_id) > memory_entries.(org_id, i
 
 Ref: audit_events.org_id > organizations.id
 Ref: audit_events.(org_id, actor_user_id) > users.(org_id, id)
-Ref: audit_events.actor_token_id > user_api_tokens.id
+Ref: audit_events.(org_id, actor_session_id) > auth_sessions.(org_id, id)

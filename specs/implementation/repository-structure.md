@@ -37,10 +37,15 @@ app/
       service.py
       router.py
 
-    auth_tokens/
+    auth/
       models.py
       schemas.py
       repository.py
+      service.py
+      router.py
+
+    admin/
+      schemas.py
       service.py
       router.py
 
@@ -90,7 +95,8 @@ app/
 
 tests/
   conftest.py
-  test_auth_tokens.py
+  test_auth_sessions.py
+  test_admin_api.py
   test_project_effective_roles.py
   test_memory_permissions.py
   test_memory_creation_review.py
@@ -116,7 +122,8 @@ tests/
 | Module | Responsibilities |
 | --- | --- |
 | `identity` | Organizations, users, org memberships, active user state. |
-| `auth_tokens` | Token hashing, scopes, expiration, revocation, last used timestamp. |
+| `auth` | OIDC provider adapters, CLI login, auth sessions, access JWT validation, refresh rotation, session revocation. |
+| `admin` | User, org membership, group, project, and membership management API. |
 | `groups` | Groups, group memberships, lead/member roles. |
 | `projects` | Projects, owning group, project memberships, timeline. |
 | `authorization` | Role resolution, policy checks, readable memory query. |

@@ -8,7 +8,10 @@ Authorization and visibility are product-critical. Tests must be behavior-first 
 
 | Area | Required from day one |
 | --- | --- |
-| Auth tokens | Token validity, scopes, expiration, revocation, max visibility. |
+| Auth sessions | OIDC session validity, refresh rotation, expiration, revocation, capabilities, max visibility. |
+| Error contract | Common problem envelope and stable error codes. |
+| Pagination | Cursor pagination consistency and authorization-safe page boundaries. |
+| Admin API | Org admin boundaries and membership/project/group mutations. |
 | Effective project roles | Inherited and explicit role resolution. |
 | Memory permissions | Read behavior by visibility and status. |
 | Memory creation/review | Initial status and approval rules. |
@@ -20,7 +23,10 @@ Authorization and visibility are product-critical. Tests must be behavior-first 
 
 | File | Purpose |
 | --- | --- |
-| `tests/test_auth_tokens.py` | Token auth and scope behavior. |
+| `tests/test_auth_sessions.py` | OIDC session auth, refresh rotation, and session restriction behavior. |
+| `tests/test_error_contract.py` | Problem Details envelope and stable status/code mapping. |
+| `tests/test_pagination.py` | Cursor behavior for list/search/timeline/review queue. |
+| `tests/test_admin_api.py` | Admin API permissions and org admin boundaries. |
 | `tests/test_project_effective_roles.py` | Effective project role derivation. |
 | `tests/test_memory_permissions.py` | Visibility/status read rules. |
 | `tests/test_memory_creation_review.py` | Creation, review, status transitions. |
@@ -39,13 +45,17 @@ Authorization and visibility are product-critical. Tests must be behavior-first 
 | Group visibility | Group memory is readable only by group members. |
 | Project visibility | Project memory is readable only by users with effective project access. |
 | Organization visibility | Organization memory is readable only by active org members. |
-| Token restriction | CLI token cannot exceed user permissions. |
+| Session restriction | CLI session cannot exceed user permissions. |
+| Session revocation | Revoked sessions cannot authenticate or refresh. |
+| Refresh rotation | Reusing an old refresh token revokes the session. |
 | Pending hidden | `pending_review` is hidden from normal search/context packs. |
 | Rejected hidden | `rejected` is hidden from normal search/context packs. |
 | Deprecated explicit | `deprecated` appears only when explicitly requested and authorized. |
 | Search safety | Search never returns something detail GET would deny. |
 | Context pack safety | Context packs never return something search would not return. |
 | Denial audit | Every authorization denial emits audit event. |
+| Error envelope | Every non-2xx API response uses the common problem envelope. |
+| Admin boundary | `org_admin` can configure org structure but cannot read private memory or approve organization memory unless also `knowledge_admin`. |
 
 ## Effective Role Tests
 
@@ -73,6 +83,41 @@ Authorization and visibility are product-critical. Tests must be behavior-first 
 | Reviewer approves project memory | Status becomes `active`. |
 | Unauthorized contributor approves project memory | Denied and audited. |
 | Knowledge admin approves organization memory | Status becomes `active`. |
+
+## Auth Session Tests
+
+| Case | Expected result |
+| --- | --- |
+| Google OIDC login creates session | Actor context resolves active user and org. |
+| CLI login exchange | Authorized CLI device code returns access token, refresh token, and session id. |
+| Disabled user uses existing access token | Request denied and audited. |
+| Revoked session uses access token | Request denied and audited. |
+| Refresh token rotation | New refresh token is returned and old token becomes used. |
+| Refresh token reuse | Session is revoked and `auth.refresh_reuse_detected` is emitted. |
+| Session missing capability | Restricted session cannot call endpoint requiring absent capability. |
+| Session max visibility | CLI session cannot create or expand memory above max visibility. |
+
+## Admin API Tests
+
+| Case | Expected result |
+| --- | --- |
+| Org admin creates group | Group created and admin audit event emitted. |
+| Org admin assigns project membership | Membership updated and effective role changes. |
+| Non org admin calls admin endpoint | Denied and audited. |
+| Org admin reads another user's private memory | Denied by normal memory authorization. |
+| Org admin alone approves organization memory | Denied unless also `knowledge_admin`. |
+| Last org admin removal | Denied. |
+
+## Error And Pagination Tests
+
+| Case | Expected result |
+| --- | --- |
+| Validation failure | Returns `422` with `VALIDATION_FAILED` problem envelope. |
+| Missing auth | Returns `401` with `UNAUTHENTICATED` problem envelope. |
+| Unauthorized hidden resource read | Returns `404` or configured denial status and emits denial audit. |
+| Invalid cursor | Returns `400` with `BAD_REQUEST`. |
+| Paginated search | Uses stable cursor and never returns unauthorized memory on later pages. |
+| Review queue pagination | Returns only reviewable memory across page boundaries. |
 
 ## Search Tests
 
@@ -112,6 +157,9 @@ Authorization and visibility are product-critical. Tests must be behavior-first 
 | Search | `search.executed` emitted without raw query by default. |
 | Context pack | `context_pack.generated` emitted. |
 | Authorization denied | `authorization.denied` emitted. |
+| Session created | `auth.session.created` emitted. |
+| Session revoked | `auth.session.revoked` emitted. |
+| Soft delete memory | `memory_entry.deleted` emitted. |
 
 ## Gherkin Mapping
 

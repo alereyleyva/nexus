@@ -66,14 +66,14 @@ Important company knowledge often lives outside formal documentation: conversati
 | Multi-tenant | Organization isolation through `org_id`. |
 | API-first | All access passes through the API. |
 | Testable | Permission and state invariants are automated from day one. |
-| CLI/plugin ready | Personal API tokens act on behalf of users. |
+| CLI/plugin ready | `nexus login` creates short-lived session credentials that act on behalf of users. |
 | PostgreSQL-first | No vector store as source of truth. |
 
 ## Product Non-Goals
 
 | Non-goal | Decision |
 | --- | --- |
-| Mandatory sessions | Do not model sessions as required resources. |
+| Mandatory source sessions | Do not model AI chats, terminal sessions, or source sessions as required memory resources. Auth sessions are separate login infrastructure. |
 | AI agents as permission principals | AI tools are source tools, not permission actors. |
 | Repositories as core entities | Store repo, branch, commit, PR, and files in `source_context`. |
 | Capture batches | Bulk upload creates independent entries, not batches. |

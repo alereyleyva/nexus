@@ -16,7 +16,7 @@ Organization
 |-- Memory entries not associated to any project
 
 User
-|-- API tokens
+|-- Auth sessions
 |-- Org membership
 |-- Group memberships
 |-- Project memberships
@@ -43,7 +43,8 @@ Memory Entry
 | Group Membership | User membership in a group with member or lead role. |
 | Project | Product, service, initiative, or work area owned by one group. |
 | Project Membership | Explicit project access for collaborators outside or above inherited group access. |
-| User API Token | Personal token used by CLI/plugin to act on behalf of a user. |
+| Auth Session | Revocable user session created by UI or CLI login. |
+| Auth Refresh Token | Opaque rotated credential for renewing a session. |
 | Memory Entry | Central knowledge unit. |
 | Memory Entry Evidence | Supporting evidence attached to a memory entry. |
 | Memory Entry Grant | Explicit user grant for restricted memory. |
@@ -62,7 +63,8 @@ Memory Entry
 | Project to owning group | Each project must have exactly one `owning_group_id`. |
 | Project to memory entries | A memory entry may reference one project. |
 | User to memory entries | Each memory entry has an owner and creator user. |
-| User to API tokens | A user may have many personal API tokens. |
+| User to auth sessions | A user may have many active or historical auth sessions. |
+| Auth session to refresh tokens | A session may have many historical refresh token records due to rotation. |
 | Memory entry to evidence | A memory entry may have many evidence rows. |
 | Memory entry to grants | Restricted memory may have many explicit user grants. |
 
@@ -159,30 +161,51 @@ If multiple roles apply, the highest role wins by this level order:
 | `reviewer` | 30 |
 | `maintainer` | 40 |
 
-## User API Token
+## Auth Session
 
-Tokens are personal credentials for CLIs/plugins. They are not actors. They restrict, never expand, user permissions.
+Auth sessions are revocable user sessions created by OIDC login. They are not actors. They restrict, never expand, user permissions.
+
+The first login provider is Google OIDC. The model must support future generic OIDC IdPs without changing memory authorization rules.
 
 | Field | Requirement |
 | --- | --- |
 | `id` | UUID primary key. |
 | `org_id` | Required tenant reference. |
-| `user_id` | Required owner user. |
-| `name` | Human token label. |
-| `token_hash` | Hash only; never store raw token. |
-| `scopes` | Array of allowed token capabilities. |
-| `max_visibility_scope` | Maximum visibility scope this token can create. |
-| `expires_at`, `revoked_at`, `last_used_at` | Token lifecycle timestamps. |
+| `user_id` | Required session user. |
+| `provider` | OIDC provider id such as `google`. |
+| `provider_subject` | Provider subject for the authenticated user. |
+| `client_type` | `web`, `cli`, or future client type. |
+| `client_name` | Optional human/client label such as `nexus-cli`. |
+| `capabilities` | Optional session capability restrictions. Empty means no session-level capability restriction. |
+| `max_visibility_scope` | Optional maximum visibility scope this session can create or expand to. |
+| `expires_at`, `revoked_at`, `last_used_at` | Session lifecycle timestamps. |
 
 Effective permissions are always:
 
 ```text
-effective_permissions = user_permissions intersect token_permissions
+effective_permissions = user_permissions intersect session_capabilities intersect session_visibility_cap
 ```
 
-## Token Scopes
+If `capabilities` is empty, session capabilities do not restrict endpoint capability checks. User permissions and authorization rules still apply.
 
-| Scope | Meaning |
+## Auth Refresh Token
+
+Refresh tokens are opaque values returned only once to clients. Store only hashes.
+
+| Field | Requirement |
+| --- | --- |
+| `id` | UUID primary key. |
+| `org_id` | Required tenant reference. |
+| `session_id` | Required auth session reference. |
+| `token_hash` | Hash only; never store raw refresh token. |
+| `parent_token_id` | Optional previous refresh token for rotation chain. |
+| `expires_at`, `used_at`, `revoked_at` | Refresh token lifecycle timestamps. |
+
+Refresh tokens are single-use. Reuse of an already used refresh token must revoke the session and emit a security audit event.
+
+## Session Capabilities
+
+| Capability | Meaning |
 | --- | --- |
 | `memory:create` | Create entries. |
 | `memory:read` | Read allowed entries. |
@@ -191,6 +214,9 @@ effective_permissions = user_permissions intersect token_permissions
 | `search:read` | Execute searches. |
 | `context_pack:generate` | Generate context packs. |
 | `grants:manage` | Manage grants for owned or administrable entries. |
+| `admin:manage` | Use organization admin endpoints when the user is also `org_admin`. |
+| `auth:read` | Read current auth context when sessions are restricted. |
+| `auth:sessions:manage` | List and revoke own sessions when sessions are restricted. |
 
 ## Visibility Scope Order
 
@@ -206,7 +232,7 @@ private < restricted < group < project < organization
 | `project_id` | Optional project association. |
 | `owner_user_id` | Required owner. |
 | `created_by_user_id` | Required creator. |
-| `submitted_via_token_id` | Optional token used by CLI/plugin. |
+| `submitted_via_session_id` | Optional auth session used by CLI/plugin. |
 | `type` | One supported memory type. |
 | `title` | Required. |
 | `body` | Required. |
@@ -218,7 +244,7 @@ private < restricted < group < project < organization
 | `source_tool` | Free-text source tool name such as `codex`. |
 | `source_ref` | Optional source thread/session/reference. |
 | `client_entry_id` | Optional idempotency key from client. |
-| `confidence` | Optional confidence value from client/tool. Not an approval substitute. |
+| `confidence` | Optional confidence value from client/tool. Must be null or between 0 and 1. Not an approval substitute. |
 | `tags` | Text array. |
 | `source_context` | Flexible JSONB source metadata. |
 | `metadata` | Flexible JSONB implementation/product metadata. |

@@ -2,7 +2,7 @@
 
 ## Core Model
 
-Only real users are permission actors in the product. AI tools such as Codex, OpenCode, Cursor, or ChatGPT are source tools. They act on behalf of a user through JWT or personal API token authentication.
+Only real users are permission actors in the product. AI tools such as Codex, OpenCode, Cursor, or ChatGPT are source tools. They act on behalf of a user through Nexus-issued session credentials created by OIDC login.
 
 ## Actor Context
 
@@ -12,9 +12,10 @@ Every authenticated request resolves an actor context:
 class ActorContext(BaseModel):
     org_id: UUID
     user_id: UUID
-    token_id: UUID | None
-    token_scopes: set[str]
-    token_max_visibility_scope: VisibilityScope | None
+    session_id: UUID
+    session_capabilities: set[str]
+    session_max_visibility_scope: VisibilityScope | None
+    client_type: Literal["web", "cli", "future_integration"]
     request_id: str
 ```
 
@@ -22,28 +23,31 @@ class ActorContext(BaseModel):
 
 | Method | Use |
 | --- | --- |
-| User JWT | UI/API direct calls. |
-| Personal API token | CLI/plugin/tool calls. |
+| OIDC web session | UI/API direct calls. |
+| OIDC CLI session | CLI/plugin/tool calls created by `nexus login`. |
 
 Required headers:
 
 ```http
-Authorization: Bearer <token>
+Authorization: Bearer <nexus_access_token>
 X-Request-Id: <uuid>
 ```
 
-`X-On-Behalf-Of` is not required in the product because personal API tokens already belong to a user.
+`X-On-Behalf-Of` is not required in the product because session credentials already belong to a user.
 
-## Token Permission Rules
+## Session Credential Rules
 
 | Rule | Requirement |
 | --- | --- |
-| Token identifies a user | Token is not an independent actor. |
-| Token restricts permissions | Token scopes intersect with user permissions. |
-| Token cannot raise visibility | `max_visibility_scope` caps creation scope. |
-| Token lifecycle enforced | Expired or revoked tokens are invalid. |
-| Last use tracked | Successful token auth updates `last_used_at`. |
-| Raw token never stored | Store only `token_hash`. |
+| Session identifies a user | Session is not an independent actor. |
+| Session restricts permissions | Session capabilities intersect with user permissions. |
+| Empty capabilities | Empty session capabilities mean no session-level capability restriction. |
+| Session cannot raise visibility | `session_max_visibility_scope` caps creation and visibility expansion. |
+| Session lifecycle enforced | Expired or revoked sessions are invalid. |
+| User lifecycle enforced | Disabled users cannot authenticate, refresh, or use existing sessions. |
+| Last use tracked | Successful session auth updates `last_used_at`. |
+| Raw refresh token never stored | Store only refresh token hashes. |
+| Refresh rotation | Refresh tokens are single-use and rotated on every refresh. |
 
 Visibility order:
 
@@ -74,10 +78,11 @@ Default hidden statuses:
 ```text
 pending_review
 rejected
+deprecated
 archived
 ```
 
-Reviewers may query `pending_review` through explicit review endpoints only.
+Reviewers may query `pending_review` through explicit review endpoints only. `deprecated` and `archived` require explicit authorized modes.
 
 ## Visibility Read Rules
 
@@ -96,9 +101,11 @@ The exact same readable memory logic must be used by:
 | Path | Requirement |
 | --- | --- |
 | `GET /v1/memory-entries/{id}` | Detail read. |
+| `GET /v1/memory-entries` | List/browse read. |
 | `POST /v1/search` | Search. |
 | `POST /v1/context-packs` | Context packs. |
 | `GET /v1/projects/{project_id}/timeline` | Project timeline. |
+| `GET /v1/review-queue` | Reviewable memory query, not normal readable query. |
 | Future exports | Any export path. |
 | Future vector search | Candidate IDs must be revalidated. |
 
@@ -153,6 +160,8 @@ The concrete SQL may differ, but behavior must not.
 
 `org_admin` does not automatically approve organization memory unless also `knowledge_admin`.
 
+Session `max_visibility_scope`, when set, must be checked before user role checks. A session may not create or expand memory above its maximum visibility even if the user would otherwise be allowed.
+
 ## Review Rules
 
 | Scope | Who can approve/reject |
@@ -163,6 +172,24 @@ The concrete SQL may differ, but behavior must not.
 | `project` | Effective project `reviewer` or `maintainer`. |
 | `organization` | `knowledge_admin`. |
 
+## Admin Rules
+
+`org_admin` is an organization configuration role. It is not a memory read or knowledge approval bypass.
+
+| Operation | Requirement |
+| --- | --- |
+| Manage users | `org_admin`. |
+| Enable/disable users | `org_admin`; disabling a user invalidates future session use and refresh. |
+| Manage org roles | `org_admin`; cannot remove the last `org_admin`; self-downgrade is denied if it would remove the actor's last admin path. |
+| Manage groups | `org_admin`. |
+| Manage group memberships | `org_admin` in v1. Group lead management is future scope unless specified. |
+| Manage projects | `org_admin`. |
+| Manage project memberships | `org_admin` in v1. Project maintainer-local admin is future scope unless specified. |
+| Approve organization memory | `knowledge_admin`; `org_admin` alone is insufficient. |
+| Read private/restricted memory | Normal memory read rules only. `org_admin` has no bypass. |
+
+Admin mutations must be audited. If a session is restricted, it also needs `admin:manage`.
+
 ## Edit Rules
 
 | Case | Requirement |
@@ -170,9 +197,18 @@ The concrete SQL may differ, but behavior must not.
 | Private/restricted owner edit | Owner can edit. |
 | Pending review owner edit | Owner can edit a pending entry they created. |
 | Shared memory under review | Reviewer/maintainer can edit within their scope. |
-| Active shared memory by contributor | Must not silently edit active shared truth. |
-| Active shared memory by reviewer/maintainer | May stay active if approver has permission. |
-| Active shared memory by non-approver | Should move to `pending_review` when material shared content changes. |
+| Active shared memory by controller | Actor with control over the memory scope may edit and keep it `active`. |
+| Active shared memory by non-controller | Deny edit. The actor should create a new proposal instead of rewriting approved truth. |
+
+Control over active shared memory means:
+
+| Scope | Controller |
+| --- | --- |
+| `group` | `group.lead` for `visibility_group_id`. |
+| `project` | Effective project `reviewer` or `maintainer`. |
+| `organization` | `knowledge_admin`. |
+
+For `private` and `restricted` memory, ownership and explicit grant roles control edit/manage behavior according to the restricted grant policy.
 
 ## Visibility Change Rules
 
@@ -193,6 +229,20 @@ Increasing audience requires approval permission over the destination scope.
 | `project` to `organization` | Requires knowledge admin. |
 | `organization` to `private` | Requires administrative policy and strong audit event. |
 
+## Archive And Delete Rules
+
+| Operation | Requirement |
+| --- | --- |
+| Archive private/restricted memory | Owner or restricted memory manager. |
+| Archive group memory | Group lead. |
+| Archive project memory | Effective project reviewer or maintainer. |
+| Archive organization memory | `knowledge_admin`. |
+| Soft-delete private/restricted memory | Owner or restricted memory manager. |
+| Withdraw pending shared proposal | Owner may soft-delete their own pending proposal. |
+| Soft-delete active shared memory | Denied in normal product flows; archive instead. |
+
+Archive keeps historical memory with status `archived`. Soft delete sets `deleted_at` and excludes the row from all normal reads.
+
 ## Denial Rules
 
 Every authorization denial must create an `authorization.denied` audit event with request context and safe metadata. Do not include secrets or raw sensitive bodies in audit metadata.
@@ -204,8 +254,13 @@ AuthorizationService must provide at least:
 ```python
 can_read_memory(actor, memory) -> bool
 can_create_memory(actor, payload) -> CreationDecision
+can_edit_memory(actor, memory, patch) -> bool
 can_review_memory(actor, memory) -> bool
 can_change_visibility(actor, memory, target_visibility) -> VisibilityDecision
+can_archive_memory(actor, memory) -> bool
+can_soft_delete_memory(actor, memory) -> bool
+can_administer_organization(actor) -> bool
 readable_memory_query(actor, statuses) -> Select
+reviewable_memory_query(actor, statuses) -> Select
 get_effective_project_role(actor, project_id) -> ProjectRole | None
 ```

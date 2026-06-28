@@ -59,7 +59,7 @@ Each scenario in `specs/features` should map to at least one automated test. Tes
 ```text
 test_search_does_not_return_project_memory_without_effective_project_access
 test_context_pack_excludes_pending_review_by_default
-test_cli_token_cannot_create_memory_above_max_visibility_scope
+test_cli_session_cannot_create_memory_above_max_visibility_scope
 ```
 
 ## ADR Policy
