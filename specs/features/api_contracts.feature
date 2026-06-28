@@ -41,6 +41,20 @@ Feature: API contracts
     Then the request is denied
     And the same memory entry would not appear in search
 
+  Scenario: API errors use the common problem envelope
+    Given "pablo" sends an invalid create memory request
+    When the API returns a validation error
+    Then the response content type is "application/problem+json"
+    And the response contains stable error code "VALIDATION_FAILED"
+    And the response contains the request id
+
+  Scenario: Memory list uses cursor pagination
+    Given "pablo" can read more than 50 memory entries in project "CECW"
+    When "pablo" lists memory entries with limit 50
+    Then the response includes at most 50 items
+    And the response includes page metadata
+    And the next page does not include unauthorized memory
+
   Scenario: PATCH memory updates search vector
     Given "pablo" can edit a memory entry
     When "pablo" changes the memory title and tags
@@ -55,6 +69,44 @@ Feature: API contracts
     And reviewed by user is "pablo"
     And reviewed at is set
     And review comment is "Valid"
+
+  Scenario: Review queue only returns reviewable memory
+    Given "pablo" can review one pending project memory entry in "CECW"
+    And "pablo" cannot review another pending organization memory entry
+    When "pablo" calls "GET /v1/review-queue"
+    Then the response includes the project memory entry
+    And the response excludes the organization memory entry
+
+  Scenario: Archive endpoint hides memory from normal search
+    Given "pablo" can archive an active project memory entry in "CECW"
+    When "pablo" calls "POST /v1/memory-entries/{id}/archive"
+    Then the memory entry status becomes "archived"
+    And the memory entry is absent from normal search results
+    And an audit event "memory_entry.archived" is emitted
+
+  Scenario: Soft delete is denied for active shared memory
+    Given "pablo" can control an active shared project memory entry in "CECW"
+    When "pablo" calls "DELETE /v1/memory-entries/{id}"
+    Then the request is rejected with conflict
+    And the response tells the client to archive instead
+
+  Scenario: Healthcheck returns liveness without authentication
+    When an unauthenticated client calls "GET /health"
+    Then the response status is 200
+    And the response body status is "ok"
+
+  Scenario: Org admin configures project membership through admin API
+    Given "pablo" has organization role "org_admin"
+    When "pablo" sets "fabio" as "reviewer" in project "CECW"
+    Then the project membership is stored
+    And an audit event "admin.project_membership_changed" is emitted
+
+  Scenario: Org admin cannot use admin role to read private memory
+    Given "pablo" has organization role "org_admin"
+    And "fabio" owns a private memory entry
+    When "pablo" calls "GET /v1/memory-entries/{id}" for that memory
+    Then the request is denied
+    And an audit event "authorization.denied" is emitted
 
   Scenario: Timeline only returns authorized project memory events
     Given project "CECW" has one memory event "fabio" can read

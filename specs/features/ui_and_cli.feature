@@ -37,7 +37,7 @@ Feature: Minimal UI and CLI behavior
     And the UI displays decisions, problems, solutions, failed attempts, risks, procedures, and open questions
 
   Scenario: CLI creates memory with source metadata
-    Given "pablo" has a personal API token with scope "memory:create"
+    Given "pablo" completed "nexus login" and has a CLI session with capability "memory:create"
     When the CLI submits a memory entry from source tool "codex"
     Then the API receives source tool "codex"
     And the API receives source context when available

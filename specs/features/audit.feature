@@ -26,6 +26,7 @@ Feature: Audit events
       | mark needs review | memory_entry.marked_needs_review |
       | deprecate memory  | memory_entry.deprecated          |
       | archive memory    | memory_entry.archived            |
+      | soft delete memory | memory_entry.deleted             |
 
   Scenario: Authorization denial emits audit event
     Given "pablo" is not authorized to read a memory entry
@@ -34,22 +35,23 @@ Feature: Audit events
     And an audit event "authorization.denied" is emitted
     And the audit decision is "deny"
 
-  Scenario: Token lifecycle emits audit events
-    Given "pablo" creates a personal API token
-    Then an audit event "token.created" is emitted
-    When "pablo" revokes the personal API token
-    Then an audit event "token.revoked" is emitted
+  Scenario: Auth session lifecycle emits audit events
+    Given "pablo" completes OIDC login
+    Then an audit event "auth.session.created" is emitted
+    When "pablo" revokes the auth session
+    Then an audit event "auth.session.revoked" is emitted
 
-  Scenario: Audit event records token id when token is used
-    Given "pablo" has an active API token
-    When "pablo" creates memory using the API token
+  Scenario: Audit event records session id when session is used
+    Given "pablo" has an active CLI auth session
+    When "pablo" creates memory using the session
     Then an audit event "memory_entry.created" is emitted
-    And the audit event actor token id is present
+    And the audit event actor session id is present
 
-  Scenario: Audit metadata must not store raw token values
-    Given "pablo" authenticates with a personal API token
+  Scenario: Audit metadata must not store raw credential values
+    Given "pablo" authenticates with a Nexus access token
     When an audit event is emitted for the request
-    Then the audit metadata does not contain the raw token
+    Then the audit metadata does not contain the raw access token
+    And the audit metadata does not contain the raw refresh token
 
   Scenario: Search audit stores hash instead of raw query by default
     Given "pablo" searches for "secret customer payment issue"

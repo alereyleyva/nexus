@@ -107,6 +107,21 @@ Feature: Memory creation and review workflow
     Then the memory status is "deprecated"
     And an audit event "memory_entry.deprecated" is emitted
 
+  Scenario: Project reviewer edits active project memory and it stays active
+    Given a project memory entry in "CECW" has status "active"
+    And "fabio" has effective project role "reviewer" in project "CECW"
+    When "fabio" edits the memory entry body
+    Then the memory status remains "active"
+    And an audit event "memory_entry.updated" is emitted
+
+  Scenario: Project contributor cannot edit active approved project memory
+    Given a project memory entry in "CECW" has status "active"
+    And "pablo" has effective project role "contributor" in project "CECW"
+    When "pablo" edits the memory entry body
+    Then the request is denied
+    And the memory status remains "active"
+    And an audit event "authorization.denied" is emitted
+
   Scenario: Deprecated memory can be archived
     Given a project memory entry in "CECW" has status "deprecated"
     And "fabio" has effective project role "maintainer" in project "CECW"
