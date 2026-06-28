@@ -5,11 +5,11 @@ Date: 2026-06-28
 
 ## Context
 
-Nexus stores governed organizational knowledge with strict authorization, review state, evidence, grants, tokens, and audit. Future semantic search may require vector indexes, but vector stores should not become canonical data stores.
+Nexus stores governed organizational knowledge with strict authorization, review state, evidence, grants, auth sessions, refresh tokens, and audit. Future semantic search may require vector indexes, but vector stores should not become canonical data stores.
 
 ## Decision
 
-Use PostgreSQL as the source of truth for organizations, users, groups, projects, memory entries, evidence, grants, tokens, and audit events.
+Use PostgreSQL as the source of truth for organizations, users, groups, projects, memory entries, evidence, grants, auth sessions, refresh tokens, and audit events.
 
 Future vector stores or search indexes are derived indexes only. They must remain behind the API and must revalidate results against PostgreSQL authorization rules.
 

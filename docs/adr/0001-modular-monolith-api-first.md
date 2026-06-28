@@ -20,7 +20,7 @@ Initial modules:
 | Module | Responsibility |
 | --- | --- |
 | `identity` | Organizations, users, org memberships. |
-| `auth_tokens` | Personal API tokens. |
+| `auth` | OIDC login, auth sessions, short-lived access tokens, refresh rotation. |
 | `groups` | Groups and group memberships. |
 | `projects` | Projects, project memberships, timeline. |
 | `authorization` | Policies and readable memory query. |

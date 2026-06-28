@@ -15,6 +15,8 @@ ADRs record durable architectural decisions for Nexus. They are binding unless s
 | `0007-postgresql-full-text-search-first.md` | Use PostgreSQL full text search for product search. |
 | `0008-no-llm-or-embeddings-in-api.md` | Do not call LLMs or generate embeddings in the API. |
 | `0009-projects-owned-by-groups.md` | Require each project to have one owning group. |
+| `0010-oidc-short-lived-user-sessions.md` | Use OIDC login and short-lived user session credentials. |
+| `0011-api-error-contract.md` | Use a stable Problem Details error envelope. |
 
 ## Template
 
