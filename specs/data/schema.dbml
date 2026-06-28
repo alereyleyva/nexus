@@ -1,0 +1,380 @@
+Project nexus {
+  database_type: 'PostgreSQL'
+  Note: 'Database model for Nexus. PostgreSQL 16+ recommended. Required extensions: pgcrypto, pg_trgm. Future optional extension: vector. PostgreSQL is the source of truth; vector stores are derived indexes only.'
+}
+
+Enum user_status {
+  active
+  disabled
+}
+
+Enum org_role {
+  member
+  knowledge_admin
+  org_admin
+}
+
+Enum group_type {
+  team
+  department
+  squad
+  area
+}
+
+Enum group_role {
+  member
+  lead
+}
+
+Enum project_status {
+  active
+  archived
+}
+
+Enum project_role {
+  viewer
+  contributor
+  reviewer
+  maintainer
+}
+
+Enum visibility_scope {
+  private
+  restricted
+  group
+  project
+  organization
+}
+
+Enum memory_type {
+  decision
+  problem
+  solution
+  failed_attempt
+  procedure
+  risk
+  open_question
+  task
+  note
+}
+
+Enum memory_status {
+  pending_review
+  active
+  needs_review
+  rejected
+  deprecated
+  archived
+}
+
+Enum source_kind {
+  ai_cli
+  manual
+  api
+  future_integration
+}
+
+Enum grant_role {
+  viewer
+  editor
+  manager
+}
+
+Enum evidence_kind {
+  quote
+  code_reference
+  document_reference
+  meeting_note
+  chat_message
+  url
+  ticket
+  pull_request
+  commit
+  manual_note
+}
+
+Enum audit_decision {
+  allow
+  deny
+}
+
+Table organizations {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  slug text [not null, unique]
+  name text [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    slug [unique, name: 'organizations_slug_unique']
+  }
+}
+
+Table users {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  email text [not null]
+  display_name text [not null]
+  status user_status [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (org_id, email) [unique, name: 'users_org_email_unique']
+    (org_id, id) [unique, name: 'users_org_id_unique']
+    (org_id, status) [name: 'users_org_status_idx']
+  }
+
+  Note: 'Real human user. Active users are valid permission actors. org_admin does not automatically read private memory.'
+}
+
+Table org_memberships {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  user_id uuid [not null]
+  role org_role [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (org_id, user_id) [unique, name: 'org_memberships_org_user_unique']
+  }
+}
+
+Table groups {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  slug text [not null]
+  name text [not null]
+  group_type group_type [not null]
+  parent_group_id uuid
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (org_id, slug) [unique, name: 'groups_org_slug_unique']
+    (org_id, id) [unique, name: 'groups_org_id_unique']
+  }
+
+  Note: 'parent_group_id is visual only in the product scope. It must not grant inherited permissions.'
+}
+
+Table group_memberships {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  group_id uuid [not null]
+  user_id uuid [not null]
+  role group_role [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (group_id, user_id) [unique, name: 'group_memberships_group_user_unique']
+    (org_id, user_id) [name: 'group_memberships_user_idx']
+    (org_id, group_id) [name: 'group_memberships_group_idx']
+  }
+}
+
+Table projects {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  owning_group_id uuid [not null]
+  key text [not null]
+  name text [not null]
+  description text
+  status project_status [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (org_id, key) [unique, name: 'projects_org_key_unique']
+    (org_id, id) [unique, name: 'projects_org_id_unique']
+    (org_id, owning_group_id) [name: 'projects_org_group_idx']
+  }
+
+  Note: 'Each project must have one owning group. Owning group membership derives effective project roles.'
+}
+
+Table project_memberships {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  project_id uuid [not null]
+  user_id uuid [not null]
+  role project_role [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (project_id, user_id) [unique, name: 'project_memberships_project_user_unique']
+    (org_id, user_id) [name: 'project_memberships_user_idx']
+    (org_id, project_id) [name: 'project_memberships_project_idx']
+  }
+}
+
+Table user_api_tokens {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  user_id uuid [not null]
+  name text [not null]
+  token_hash text [not null, unique]
+  scopes "text[]" [not null, default: `'{}'`]
+  max_visibility_scope visibility_scope [not null, default: 'project']
+  expires_at timestamptz
+  revoked_at timestamptz
+  last_used_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    token_hash [unique, name: 'user_api_tokens_token_hash_unique']
+  }
+
+  Note: 'Personal token used by CLI/plugin. It acts on behalf of a user and restricts permissions; it never expands user permissions.'
+}
+
+Table memory_entries {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  project_id uuid
+  owner_user_id uuid [not null]
+  created_by_user_id uuid [not null]
+  submitted_via_token_id uuid
+  type memory_type [not null]
+  title text [not null]
+  body text [not null]
+  rationale text
+  status memory_status [not null]
+  visibility_scope visibility_scope [not null]
+  visibility_group_id uuid
+  source_kind source_kind [not null]
+  source_tool text [not null]
+  source_ref text
+  client_entry_id text
+  confidence numeric(5,4)
+  tags "text[]" [not null, default: `'{}'`]
+  source_context jsonb [not null, default: `'{}'`]
+  metadata jsonb [not null, default: `'{}'`]
+  reviewed_by_user_id uuid
+  review_comment text
+  reviewed_at timestamptz
+  review_after timestamptz
+  search_vector tsvector
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  deleted_at timestamptz
+
+  indexes {
+    (org_id, id) [unique, name: 'memory_entries_org_id_unique']
+    (org_id, project_id) [name: 'memory_entries_org_project_idx']
+    (org_id, status) [name: 'memory_entries_status_idx']
+    (org_id, visibility_scope) [name: 'memory_entries_visibility_idx']
+    (org_id, owner_user_id) [name: 'memory_entries_owner_idx']
+    (org_id, visibility_group_id) [name: 'memory_entries_group_visibility_idx', note: 'Partial index where visibility_group_id is not null.']
+    (org_id, source_tool, source_ref) [name: 'memory_entries_source_ref_idx', note: 'Partial index where source_ref is not null.']
+    tags [name: 'memory_entries_tags_idx', type: gin]
+    source_context [name: 'memory_entries_source_context_idx', type: gin]
+    metadata [name: 'memory_entries_metadata_idx', type: gin]
+    search_vector [name: 'memory_entries_search_vector_idx', type: gin]
+    (org_id, created_by_user_id, source_tool, client_entry_id) [unique, name: 'memory_entries_client_entry_id_unique', note: 'Partial unique index where client_entry_id is not null.']
+  }
+
+  Note: 'Constraints to implement in migrations: group visibility requires visibility_group_id; non-group visibility requires visibility_group_id null; project visibility requires project_id; confidence should be null or between 0 and 1 if strict validation is enabled.'
+}
+
+Table memory_entry_grants {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  memory_entry_id uuid [not null]
+  grantee_user_id uuid [not null]
+  role grant_role [not null]
+  created_by_user_id uuid [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (memory_entry_id, grantee_user_id) [unique, name: 'memory_entry_grants_entry_grantee_unique']
+    (org_id, grantee_user_id) [name: 'memory_entry_grants_grantee_idx']
+  }
+
+  Note: 'Grants are only for restricted memory and concrete users. Do not use for groups, projects, or organization visibility.'
+}
+
+Table memory_entry_evidence {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  memory_entry_id uuid [not null]
+  kind evidence_kind [not null]
+  title text
+  quote text
+  url text
+  locator jsonb [not null, default: `'{}'`]
+  metadata jsonb [not null, default: `'{}'`]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (org_id, memory_entry_id) [name: 'memory_entry_evidence_entry_idx']
+  }
+
+  Note: 'Evidence inherits the visibility of its memory entry. It has no independent visibility in the product.'
+}
+
+Table audit_events {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  actor_user_id uuid
+  actor_token_id uuid
+  action text [not null]
+  resource_type text
+  resource_id uuid
+  decision audit_decision
+  reason text
+  request_id text
+  ip_address inet
+  user_agent text
+  metadata jsonb [not null, default: `'{}'`]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (org_id, created_at) [name: 'audit_events_org_created_idx', note: 'Use created_at desc in PostgreSQL.']
+    (org_id, resource_type, resource_id) [name: 'audit_events_resource_idx']
+  }
+
+  Note: 'Audit metadata must not store raw tokens, secret-bearing request bodies, or raw search queries by default.'
+}
+
+Ref: users.org_id > organizations.id
+Ref: org_memberships.org_id > organizations.id
+Ref: org_memberships.(org_id, user_id) > users.(org_id, id)
+
+Ref: groups.org_id > organizations.id
+Ref: groups.(org_id, parent_group_id) > groups.(org_id, id)
+
+Ref: group_memberships.org_id > organizations.id
+Ref: group_memberships.(org_id, group_id) > groups.(org_id, id)
+Ref: group_memberships.(org_id, user_id) > users.(org_id, id)
+
+Ref: projects.org_id > organizations.id
+Ref: projects.(org_id, owning_group_id) > groups.(org_id, id)
+
+Ref: project_memberships.org_id > organizations.id
+Ref: project_memberships.(org_id, project_id) > projects.(org_id, id)
+Ref: project_memberships.(org_id, user_id) > users.(org_id, id)
+
+Ref: user_api_tokens.org_id > organizations.id
+Ref: user_api_tokens.(org_id, user_id) > users.(org_id, id)
+
+Ref: memory_entries.org_id > organizations.id
+Ref: memory_entries.(org_id, project_id) > projects.(org_id, id)
+Ref: memory_entries.(org_id, owner_user_id) > users.(org_id, id)
+Ref: memory_entries.(org_id, created_by_user_id) > users.(org_id, id)
+Ref: memory_entries.submitted_via_token_id > user_api_tokens.id
+Ref: memory_entries.(org_id, visibility_group_id) > groups.(org_id, id)
+Ref: memory_entries.(org_id, reviewed_by_user_id) > users.(org_id, id)
+
+Ref: memory_entry_grants.org_id > organizations.id
+Ref: memory_entry_grants.(org_id, memory_entry_id) > memory_entries.(org_id, id) [delete: cascade]
+Ref: memory_entry_grants.(org_id, grantee_user_id) > users.(org_id, id)
+Ref: memory_entry_grants.(org_id, created_by_user_id) > users.(org_id, id)
+
+Ref: memory_entry_evidence.org_id > organizations.id
+Ref: memory_entry_evidence.(org_id, memory_entry_id) > memory_entries.(org_id, id) [delete: cascade]
+
+Ref: audit_events.org_id > organizations.id
+Ref: audit_events.(org_id, actor_user_id) > users.(org_id, id)
+Ref: audit_events.actor_token_id > user_api_tokens.id
