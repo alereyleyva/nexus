@@ -26,7 +26,7 @@ This file records how the original monolithic project brief was decomposed into 
 | Source context examples for code, meetings, documents, support | `specs/domain/model.md`, `specs/api/rest-api.md`, `specs/features/api_contracts.feature` |
 | Audit events, audit metadata, search audit safety | `specs/security/security-observability-audit.md`, `specs/features/audit.feature` |
 | Security and privacy controls, future embedding risks | `specs/security/security-observability-audit.md`, `docs/adr/0004-postgresql-source-of-truth.md`, `docs/adr/0007-postgresql-full-text-search-first.md` |
-| Technical architecture, stack, repository layout, module structure | `specs/implementation/repository-structure.md`, `specs/implementation/internal-services.md`, `docs/adr/0001-modular-monolith-api-first.md` |
+| Technical architecture, stack, repository layout, module structure, code quality, style, dependencies, migrations, CI | `specs/implementation/repository-structure.md`, `specs/implementation/internal-services.md`, `specs/implementation/code-quality.md`, `specs/implementation/python-style.md`, `specs/implementation/dependency-management.md`, `specs/implementation/database-migrations.md`, `specs/implementation/ci-quality-gates.md`, `docs/adr/0001-modular-monolith-api-first.md` |
 | Internal service responsibilities: auth, authorization, memory, search, context packs, audit | `specs/implementation/internal-services.md` |
 | Main workflows: private memory, project proposals, reviewer-created memory, handover, restricted sharing | `specs/product/overview.md`, `specs/features/memory_creation_and_review.feature`, `specs/features/context_packs.feature`, `specs/features/visibility_and_grants.feature` |
 | Minimal UI and CLI/plugin contract | `specs/product/ui-cli.md`, `specs/features/ui_and_cli.feature` |
@@ -34,7 +34,7 @@ This file records how the original monolithic project brief was decomposed into 
 | Observability, logs, technical metrics, product metrics | `specs/security/security-observability-audit.md` |
 | Roadmap, future extensions, risks and mitigations | `specs/product/roadmap.md` |
 | Acceptance criteria | `specs/product/overview.md`, `specs/implementation/testing.md`, `specs/features/*.feature` |
-| AI implementation prompt | `specs/implementation/ai-implementation-prompt.md` |
+| AI implementation prompt and agent workflow | `specs/implementation/ai-implementation-prompt.md`, `specs/implementation/agent-workflow.md`, `AGENTS.md` |
 | Final product framing and conclusion | `README.md`, `specs/product/overview.md` |
 
 ## Decomposition Decision

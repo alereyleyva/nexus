@@ -15,6 +15,11 @@ Before coding, read:
 - specs/security/authorization.md
 - specs/data/schema.dbml
 - specs/implementation/repository-structure.md
+- specs/implementation/python-style.md
+- specs/implementation/code-quality.md
+- specs/implementation/ci-quality-gates.md
+- specs/implementation/dependency-management.md
+- specs/implementation/database-migrations.md
 - specs/implementation/internal-services.md
 - specs/api/rest-api.md
 - specs/search/search-and-context-packs.md
@@ -40,14 +45,16 @@ Core architectural decisions:
 
 Tech stack:
 - Python 3.12
+- uv
 - FastAPI
 - Pydantic v2
 - SQLAlchemy 2
 - Alembic
 - PostgreSQL 16
 - pytest
-- ruff
-- mypy
+- coverage.py
+- Ruff
+- basedpyright
 - docker-compose
 
 Core modules:
@@ -175,6 +182,16 @@ Testing requirements:
 - Knowledge admin can approve organization memory.
 - Pending/rejected/deprecated/archived entries are hidden from normal search/context packs.
 - Changing visibility to a wider scope requires proper approval or review workflow.
+
+Quality requirements:
+- Use `uv` and commit `uv.lock` with dependency changes.
+- Use `ruff format` as the only formatter.
+- Use `ruff check` as the only linter/import sorter.
+- Use `basedpyright` as the strict type checker; Ruff passing is not enough.
+- Use `pytest` and `coverage.py` for tests and coverage.
+- Follow `specs/implementation/repository-structure.md` exactly; do not create generic `utils` modules.
+- Follow `specs/implementation/python-style.md` for FastAPI, Pydantic, SQLAlchemy, service, repository, logging, and error style.
+- Run or report status for `uv run ruff format --check .`, `uv run ruff check .`, `uv run basedpyright`, `uv run pytest`, and coverage gates.
 
 If you encounter an unspecified behavior, update specs/implementation/open-questions.md or ask for a decision instead of inventing product behavior.
 ```

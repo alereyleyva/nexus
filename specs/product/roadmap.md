@@ -13,7 +13,8 @@ Estimated duration: 3-5 days.
 | Healthcheck | Basic health endpoint. |
 | Configuration | Environment-based settings. |
 | README | Developer setup docs. |
-| CI | Basic lint/test workflow. |
+| Code quality config | `pyproject.toml`, `pyrightconfig.json`, Ruff, basedpyright, pytest, coverage. |
+| CI | Format, lint, type, test, and coverage gates. |
 
 ## Phase 1: Core Identity And Permissions
 

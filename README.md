@@ -23,7 +23,10 @@ This repository contains the canonical product specifications for Nexus, organiz
 | `specs/api/rest-api.md` | REST endpoints and request/response contracts. |
 | `specs/search/search-and-context-packs.md` | PostgreSQL FTS search and context pack behavior. |
 | `specs/implementation/internal-services.md` | Internal service responsibilities and function boundaries. |
-| `specs/implementation/repository-structure.md` | Recommended FastAPI repository layout. |
+| `specs/implementation/repository-structure.md` | Required FastAPI/Python repository layout. |
+| `specs/implementation/code-quality.md` | Ruff, basedpyright, pytest, coverage, and suppression policy. |
+| `specs/implementation/python-style.md` | Python implementation style and layer conventions. |
+| `specs/implementation/ci-quality-gates.md` | Required CI checks and coverage gates. |
 | `specs/implementation/testing.md` | Mandatory test coverage and invariants. |
 | `specs/implementation/spec-driven-development.md` | Rules for maintaining the project from specs. |
 | `specs/implementation/open-questions.md` | Resolved implementation decisions and any future open gaps. |
@@ -31,6 +34,7 @@ This repository contains the canonical product specifications for Nexus, organiz
 | `specs/features/*.feature` | Behavior specs in Gherkin. |
 | `specs/traceability/project-brief-coverage.md` | Coverage map proving the original brief was decomposed into specs. |
 | `docs/adr/*.md` | Architectural Decision Records. |
+| `AGENTS.md` | Operational instructions for coding agents. |
 
 ## Product Principles
 
@@ -45,19 +49,21 @@ This repository contains the canonical product specifications for Nexus, organiz
 | Shared memory is governed | Group, project, and organization memory may require review. |
 | No LLM in the API | AI happens in clients/tools, not inside the API. |
 
-## Recommended Stack
+## Implementation Stack
 
 | Layer | Technology |
 | --- | --- |
 | Runtime | Python 3.12 |
+| Package manager | uv |
 | API | FastAPI |
 | Schemas | Pydantic v2 |
 | ORM | SQLAlchemy 2 |
 | Migrations | Alembic |
 | Database | PostgreSQL 16+ |
 | Tests | pytest |
-| Linting | ruff |
-| Typing | mypy |
+| Formatting/linting | Ruff |
+| Typing | basedpyright |
+| Coverage | coverage.py |
 | Local infra | docker-compose |
 
 ## Implementation Modules
@@ -91,7 +97,8 @@ The product is functional when:
 | Source of truth | PostgreSQL is the only source of truth. |
 | AI boundary | The API never calls an LLM in the product. |
 | Tests | Permission, review, search, context pack, session, admin, error, and audit invariants are automated. |
+| Quality gates | Ruff format/check, basedpyright, pytest, and coverage pass. |
 
 ## Working From Specs
 
-Before implementing a feature, read the matching Markdown spec, Gherkin feature, and ADR. Any behavior change must update the spec first, then implementation, then tests. If a requirement is missing or ambiguous, record it in `specs/implementation/open-questions.md` or create an ADR before coding the decision.
+Before implementing a feature, read the matching Markdown spec, technical implementation spec, Gherkin feature, ADR, and `AGENTS.md`. Any behavior or engineering-standard change must update the spec first, then implementation, then tests. If a requirement is missing or ambiguous, record it in `specs/implementation/open-questions.md` or create an ADR before coding the decision.

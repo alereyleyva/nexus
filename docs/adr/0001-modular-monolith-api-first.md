@@ -13,7 +13,7 @@ Microservices would add deployment, observability, transaction, and authorizatio
 
 Build the product as an API-first modular monolith.
 
-The recommended stack is Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, PostgreSQL 16, pytest, ruff, mypy, and docker-compose.
+The v1 stack is Python 3.12, uv, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, PostgreSQL 16, pytest, coverage.py, Ruff, basedpyright, and docker-compose.
 
 Initial modules:
 
@@ -49,3 +49,4 @@ The monolith must still maintain module boundaries and avoid direct cross-module
 | Architecture | `specs/product/overview.md` |
 | API | `specs/api/rest-api.md` |
 | SDD | `specs/implementation/spec-driven-development.md` |
+| Code quality | `specs/implementation/code-quality.md` |

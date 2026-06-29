@@ -12,12 +12,13 @@ No behavior change should land without an aligned spec change, a test change, or
 
 | Artifact | Role |
 | --- | --- |
-| Markdown specs | Define product, domain, API, data, security, and operational requirements. |
+| Markdown specs | Define product, domain, API, data, security, operational, and technical-standard requirements. |
 | DBML | Defines the intended database model and relationships. |
 | Gherkin features | Define behavior in acceptance-test language. |
 | ADRs | Record significant decisions and rejected alternatives. |
 | Tests | Executable proof that behavior matches specs. |
 | Code | Implementation detail, not the source of product truth. |
+| AGENTS.md | Operational entry point that directs agents to the binding specs. |
 
 ## Change Workflow
 
@@ -27,7 +28,7 @@ No behavior change should land without an aligned spec change, a test change, or
 | 2 | Update Markdown spec, Gherkin scenario, DBML, or ADR first. |
 | 3 | Implement the smallest code change that satisfies the spec. |
 | 4 | Add or update tests mapped to the Gherkin scenario or invariant. |
-| 5 | Run relevant tests. |
+| 5 | Run relevant tests and quality gates. |
 | 6 | If implementation reveals ambiguity, update `specs/implementation/open-questions.md` or create an ADR. |
 
 ## AI Agent Instructions
@@ -36,6 +37,8 @@ No behavior change should land without an aligned spec change, a test change, or
 | --- | --- |
 | Build context first | Read relevant specs before editing code. |
 | Prefer minimal implementation | Avoid adding future architecture not required by specs. |
+| Follow Python structure | New files must follow `repository-structure.md`; no generic runtime `utils`. |
+| Keep tooling green | Ruff, basedpyright, pytest, and coverage gates are all required for Python changes. |
 | Do not invent permissions | All read paths must use the shared readable memory query. |
 | Do not bypass the API boundary | No direct client access to database or derived indexes. |
 | Keep product boundaries | No LLM, embeddings, sessions, repositories, agents-as-principals, or batches unless specs change. |
@@ -51,6 +54,7 @@ No behavior change should land without an aligned spec change, a test change, or
 | Search/context pack code | `specs/search/search-and-context-packs.md`. |
 | Audit code | `specs/security/security-observability-audit.md`. |
 | Architectural patterns | ADR IDs. |
+| Python structure/style/tooling | `specs/implementation/*.md` technical standards. |
 
 ## Gherkin-To-Test Mapping
 
@@ -86,6 +90,7 @@ Before merging implementation work, check:
 | Security invariants | Authorization tests prove no new bypass. |
 | Audit requirements | Sensitive operations are audited. |
 | Open questions | No unresolved gap was implemented by assumption. |
+| Quality gates | Ruff format/check, basedpyright, pytest, and coverage are passing or explicitly reported. |
 
 ## Maintenance Principle
 
