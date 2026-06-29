@@ -74,4 +74,4 @@ Implementation should define common error classes in `app/common/errors.py` and 
 | Spec | File |
 | --- | --- |
 | API | `specs/api/rest-api.md` |
-| Testing | `specs/implementation/testing.md` |
+| Testing | `standards/testing.md` |

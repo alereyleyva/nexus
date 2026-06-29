@@ -48,5 +48,5 @@ The monolith must still maintain module boundaries and avoid direct cross-module
 | --- | --- |
 | Architecture | `specs/product/overview.md` |
 | API | `specs/api/rest-api.md` |
-| SDD | `specs/implementation/spec-driven-development.md` |
-| Code quality | `specs/implementation/code-quality.md` |
+| SDD | `standards/spec-driven-development.md` |
+| Code quality | `standards/python/code-quality.md` |

@@ -14,17 +14,17 @@ Before coding, read:
 - specs/domain/model.md
 - specs/security/authorization.md
 - specs/data/schema.dbml
-- specs/implementation/repository-structure.md
-- specs/implementation/python-style.md
-- specs/implementation/code-quality.md
-- specs/implementation/ci-quality-gates.md
-- specs/implementation/dependency-management.md
-- specs/implementation/database-migrations.md
-- specs/implementation/internal-services.md
+- standards/backend/repository-structure.md
+- standards/python/style.md
+- standards/python/code-quality.md
+- standards/ci-quality-gates.md
+- standards/dependency-management.md
+- standards/database-migrations.md
+- standards/backend/internal-services.md
 - specs/api/rest-api.md
 - specs/search/search-and-context-packs.md
 - specs/security/security-observability-audit.md
-- specs/implementation/testing.md
+- standards/testing.md
 - specs/product/ui-cli.md
 - specs/features/*.feature
 - docs/adr/*.md
@@ -189,9 +189,9 @@ Quality requirements:
 - Use `ruff check` as the only linter/import sorter.
 - Use `basedpyright` as the strict type checker; Ruff passing is not enough.
 - Use `pytest` and `coverage.py` for tests and coverage.
-- Follow `specs/implementation/repository-structure.md` exactly; do not create generic `utils` modules.
-- Follow `specs/implementation/python-style.md` for FastAPI, Pydantic, SQLAlchemy, service, repository, logging, and error style.
+- Follow `standards/backend/repository-structure.md` exactly; do not create generic `utils` modules.
+- Follow `standards/python/style.md` for FastAPI, Pydantic, SQLAlchemy, service, repository, logging, and error style.
 - Run or report status for `uv run ruff format --check .`, `uv run ruff check .`, `uv run basedpyright`, `uv run pytest`, and coverage gates.
 
-If you encounter an unspecified behavior, update specs/implementation/open-questions.md or ask for a decision instead of inventing product behavior.
+If you encounter an unspecified behavior, update `docs/decisions/resolved-questions.md` or ask for a decision instead of inventing product behavior.
 ```

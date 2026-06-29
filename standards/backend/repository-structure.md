@@ -90,7 +90,8 @@ Root item responsibilities:
 | `alembic.ini` | Alembic configuration. |
 | `app/` | Runtime application package. |
 | `tests/` | Automated tests. |
-| `specs/` | Product, behavior, data, security, and implementation specs. |
+| `specs/` | Product, behavior, data, API, and security specs. |
+| `standards/` | Engineering, implementation, quality, and agent workflow standards. |
 | `docs/adr/` | Binding architectural decisions. |
 | `typings/` | Local stubs for untyped third-party packages when needed. |
 | `scripts/` | Small developer/maintenance scripts; no product runtime logic. |
@@ -207,7 +208,7 @@ Memory reads must never be implemented as ad hoc queries. The following paths mu
 
 ## Test Layout
 
-Top-level behavior tests named in `specs/implementation/testing.md` are required. Additional tests should be organized as:
+Top-level behavior tests named in `standards/testing.md` are required. Additional tests should be organized as:
 
 ```text
 tests/

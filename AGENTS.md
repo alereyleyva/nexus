@@ -4,7 +4,7 @@
 
 Nexus is a governed shared memory API for AI-assisted teams. It stores structured memory entries, enforces tenant-aware authorization, supports review workflows, provides authorized search/context packs, and keeps audit trails.
 
-The repository is spec-first. Code is an implementation detail and should be rebuildable from `docs/adr`, `specs/`, DBML, Gherkin features, and implementation standards.
+The repository is spec-first. Code is an implementation detail and should be rebuildable from `docs/adr`, `specs/`, `standards/`, DBML, and Gherkin features.
 
 ## Source Of Truth
 
@@ -13,11 +13,12 @@ Read sources in this order when there is a conflict:
 | Priority | Source | Role |
 | --- | --- | --- |
 | 1 | `docs/adr/*.md` | Binding architectural decisions. |
-| 2 | `specs/**/*.md` and `specs/data/schema.dbml` | Product, API, security, data, and technical contracts. |
-| 3 | `specs/features/*.feature` | Acceptance behavior. |
-| 4 | `AGENTS.md` | Operational instructions for agents. |
+| 2 | `specs/**/*.md` and `specs/data/schema.dbml` | Product, API, security, data, and behavior contracts. |
+| 3 | `standards/**/*.md` | Engineering, implementation, quality, and workflow contracts. |
+| 4 | `specs/features/*.feature` | Acceptance behavior. |
+| 5 | `AGENTS.md` | Operational instructions for agents. |
 
-Do not implement behavior that contradicts ADRs, specs, DBML, or Gherkin. Update the relevant source first.
+Do not implement behavior or technical design that contradicts ADRs, specs, standards, DBML, or Gherkin. Update the relevant source first.
 
 ## Required Reading
 
@@ -25,24 +26,25 @@ For any non-trivial task, start with:
 
 ```text
 specs/README.md
-specs/implementation/spec-driven-development.md
-specs/implementation/agent-workflow.md
+standards/README.md
+standards/spec-driven-development.md
+standards/agent-workflow.md
 ```
 
 For Python implementation tasks, also read:
 
 ```text
-specs/implementation/repository-structure.md
-specs/implementation/python-style.md
-specs/implementation/code-quality.md
-specs/implementation/ci-quality-gates.md
+standards/backend/repository-structure.md
+standards/python/style.md
+standards/python/code-quality.md
+standards/ci-quality-gates.md
 ```
 
 For data/schema tasks, read:
 
 ```text
 specs/data/schema.dbml
-specs/implementation/database-migrations.md
+standards/database-migrations.md
 specs/domain/model.md
 ```
 
@@ -53,7 +55,7 @@ For auth, permissions, memory visibility, search, context packs, or audit, read 
 | Rule | Requirement |
 | --- | --- |
 | Spec first | Behavior, data, architecture, or technical-standard changes update specs/ADRs/Gherkin before code. |
-| No invented behavior | If unspecified, ask or update `specs/implementation/open-questions.md`. |
+| No invented behavior | If unspecified, ask or update `docs/decisions/resolved-questions.md`. |
 | No authorization bypass | Every memory read path must use shared readable/reviewable memory logic. |
 | No direct client DB/index access | All clients use the API. |
 | No API-side LLM | The API does not call LLMs or generate embeddings in v1. |
@@ -63,7 +65,7 @@ For auth, permissions, memory visibility, search, context packs, or audit, read 
 
 ## Python Structure
 
-The runtime app must follow `specs/implementation/repository-structure.md`.
+The runtime app must follow `standards/backend/repository-structure.md`.
 
 Core direction:
 
@@ -105,7 +107,7 @@ Tests are behavior-first and should map to specs or Gherkin scenarios.
 Required test guidance lives in:
 
 ```text
-specs/implementation/testing.md
+standards/testing.md
 specs/features/*.feature
 ```
 
@@ -124,7 +126,7 @@ SQLAlchemy models
 tests
 ```
 
-Follow `specs/implementation/database-migrations.md`. Use PostgreSQL semantics, named constraints/indexes, tenant-safe composite foreign keys where practical, and explicit migration review.
+Follow `standards/database-migrations.md`. Use PostgreSQL semantics, named constraints/indexes, tenant-safe composite foreign keys where practical, and explicit migration review.
 
 ## Commit Rules
 

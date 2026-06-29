@@ -1,4 +1,4 @@
-# Resolved Implementation Decisions
+# Resolved Decisions
 
 The original brief left several implementation questions open so implementers would not invent hidden product behavior. The questions below are now resolved and linked to the canonical specs that define the behavior.
 

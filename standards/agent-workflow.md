@@ -14,10 +14,10 @@ Before editing code, agents must read the smallest relevant set of specs:
 | --- | --- |
 | Product/API behavior | `specs/api/rest-api.md`, relevant `specs/features/*.feature`, domain/security specs. |
 | Authorization/security | `specs/security/authorization.md`, `specs/security/security-observability-audit.md`, relevant ADRs. |
-| Database/schema | `specs/data/schema.dbml`, `specs/implementation/database-migrations.md`, domain spec. |
-| Python implementation | `specs/implementation/repository-structure.md`, `python-style.md`, `code-quality.md`. |
-| Tests | `specs/implementation/testing.md`, relevant Gherkin scenarios. |
-| Tooling/CI | `code-quality.md`, `ci-quality-gates.md`, `dependency-management.md`. |
+| Database/schema | `specs/data/schema.dbml`, `standards/database-migrations.md`, domain spec. |
+| Python implementation | `standards/backend/repository-structure.md`, `standards/python/style.md`, `standards/python/code-quality.md`. |
+| Tests | `standards/testing.md`, relevant Gherkin scenarios. |
+| Tooling/CI | `standards/python/code-quality.md`, `standards/ci-quality-gates.md`, `standards/dependency-management.md`. |
 
 ## Change Workflow
 
@@ -46,11 +46,11 @@ Before editing code, agents must read the smallest relevant set of specs:
 
 | Area | Requirement |
 | --- | --- |
-| File placement | Follow `repository-structure.md`; do not create ad hoc utility folders. |
-| Style | Follow `python-style.md`; keep routers thin and services explicit. |
-| Quality | Follow `code-quality.md`; Ruff success is not enough without basedpyright. |
-| CI | New code must be compatible with `ci-quality-gates.md`. |
-| Migrations | Follow `database-migrations.md`; DBML and migrations move together. |
+| File placement | Follow `standards/backend/repository-structure.md`; do not create ad hoc utility folders. |
+| Style | Follow `standards/python/style.md`; keep routers thin and services explicit. |
+| Quality | Follow `standards/python/code-quality.md`; Ruff success is not enough without basedpyright. |
+| CI | New code must be compatible with `standards/ci-quality-gates.md`. |
+| Migrations | Follow `standards/database-migrations.md`; DBML and migrations move together. |
 
 ## Agent Output Expectations
 

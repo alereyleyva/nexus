@@ -1,20 +1,22 @@
-# Nexus Spec Index
+# Nexus Product Spec Index
 
-This directory is the canonical specification source for Nexus. It contains product, domain, data, security, API, search, implementation, technical-standard, and behavior specs used for spec-driven development.
+This directory is the canonical product and behavior specification source for Nexus. It contains product, domain, data, API, security, search, and acceptance specs.
+
+Engineering and implementation standards live in `standards/`.
 
 ## Source Hierarchy
 
 | Priority | Source | Use |
 | --- | --- | --- |
 | 1 | ADRs in `docs/adr` | Binding architectural decisions. |
-| 2 | Specs in `specs/` | Binding product, domain, API, security, data, implementation, and engineering-standard requirements. |
-| 3 | Gherkin in `specs/features` | Binding behavior and acceptance scenarios. |
+| 2 | Product specs in `specs/` | Binding product, domain, API, security, data, and behavior requirements. |
+| 3 | Engineering standards in `standards/` | Binding implementation, quality, CI, dependency, and workflow requirements. |
 | 4 | Traceability in `specs/traceability` | Coverage proof and mapping from decomposed source material. |
-| 5 | `AGENTS.md` | Operational entry point for coding agents; points to binding specs. |
+| 5 | `AGENTS.md` | Operational entry point for coding agents; points to binding specs and standards. |
 
-If sources conflict, update the relevant spec and add or amend an ADR. Do not silently implement behavior that contradicts an ADR or a feature scenario.
+If sources conflict, update the relevant spec/standard and add or amend an ADR. Do not silently implement behavior that contradicts an ADR, product spec, engineering standard, or feature scenario.
 
-## Implementation Reading Order
+## Product Reading Order
 
 | Step | Read |
 | --- | --- |
@@ -22,18 +24,14 @@ If sources conflict, update the relevant spec and add or amend an ADR. Do not si
 | 2 | `domain/model.md` |
 | 3 | `security/authorization.md` |
 | 4 | `data/schema.dbml` |
-| 5 | `implementation/repository-structure.md` |
-| 6 | `implementation/python-style.md` |
-| 7 | `implementation/code-quality.md` |
-| 8 | `implementation/internal-services.md` |
-| 9 | `api/rest-api.md` |
-| 10 | `search/search-and-context-packs.md` |
-| 11 | `security/security-observability-audit.md` |
-| 12 | `implementation/testing.md` |
-| 13 | Relevant `features/*.feature` files |
-| 14 | Relevant `docs/adr/*.md` files |
+| 5 | `api/rest-api.md` |
+| 6 | `search/search-and-context-packs.md` |
+| 7 | `security/security-observability-audit.md` |
+| 8 | Relevant `features/*.feature` files |
+| 9 | Relevant `docs/adr/*.md` files |
+| 10 | Relevant `standards/*.md` files when implementing. |
 
-## Spec Files
+## Product Spec Files
 
 | File | Contents |
 | --- | --- |
@@ -46,18 +44,6 @@ If sources conflict, update the relevant spec and add or amend an ADR. Do not si
 | `security/security-observability-audit.md` | Security controls, audit events, logs, metrics, and privacy rules. |
 | `api/rest-api.md` | REST endpoints, payload examples, default behavior, audit expectations. |
 | `search/search-and-context-packs.md` | Full text search, ranking, safe filtering, context packs, project timeline. |
-| `implementation/repository-structure.md` | Required FastAPI/Python repository structure and module layout. |
-| `implementation/internal-services.md` | Auth, authorization, memory, search, context pack, and audit service responsibilities. |
-| `implementation/testing.md` | Required test classes and invariant list. |
-| `implementation/spec-driven-development.md` | Process for keeping code, tests, specs, and ADRs aligned. |
-| `implementation/code-quality.md` | Ruff, basedpyright, pytest, coverage, and suppression policy. |
-| `implementation/python-style.md` | Python naming, imports, typing, FastAPI, Pydantic, SQLAlchemy, logging, and service style. |
-| `implementation/ci-quality-gates.md` | Required CI checks and coverage thresholds. |
-| `implementation/dependency-management.md` | Dependency tooling, groups, versioning, and package acceptance rules. |
-| `implementation/database-migrations.md` | DBML/Alembic migration contract and review checklist. |
-| `implementation/agent-workflow.md` | Canonical workflow for coding agents. |
-| `implementation/open-questions.md` | Resolved implementation decisions and future open gaps. |
-| `implementation/ai-implementation-prompt.md` | Prompt for coding agents. |
 | `traceability/project-brief-coverage.md` | Coverage map for the decomposed source brief. |
 
 ## Feature Files
@@ -79,14 +65,13 @@ If sources conflict, update the relevant spec and add or amend an ADR. Do not si
 
 | Rule | Requirement |
 | --- | --- |
-| Spec-first changes | Change specs before code when behavior changes. |
+| Spec-first changes | Change product specs before behavior changes. |
+| Standards-first changes | Change `standards/` before engineering-standard changes. |
 | Tests follow Gherkin | Each behavior scenario should map to at least one automated test. |
 | ADRs for tradeoffs | Architecture, security, storage, auth, or long-lived process decisions need ADRs. |
 | No implicit permissions | Any new read path must reuse the shared readable memory query. |
 | No hidden AI dependency | The API must not call LLMs in product behavior. |
-| Open questions stay visible | Do not fill gaps by assumption; document or decide them. |
-| Technical standards are binding | Code must follow implementation specs, not just product behavior specs. |
-| Quality gates are mandatory | Python changes must satisfy Ruff, basedpyright, pytest, and coverage gates. |
+| Open questions stay visible | Do not fill gaps by assumption; ask or document the decision. |
 
 ## Traceability Labels
 
@@ -100,6 +85,6 @@ Use these labels in issues, PRs, commits, or test names when possible:
 | `SPEC-API` | Endpoint contract behavior. |
 | `SPEC-SEARCH` | Search, ranking, or context pack behavior. |
 | `SPEC-AUDIT` | Audit, logging, observability, or security behavior. |
-| `SPEC-IMPL` | Repository structure, code quality, CI, dependencies, migrations, or agent workflow. |
+| `STANDARD` | Repository structure, code quality, CI, dependencies, migrations, or agent workflow. |
 | `ADR` | Architectural decision. |
 | `GHERKIN` | Scenario-backed behavior. |

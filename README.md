@@ -22,17 +22,17 @@ This repository contains the canonical product specifications for Nexus, organiz
 | `specs/security/security-observability-audit.md` | Security, privacy, audit, logs, and metrics. |
 | `specs/api/rest-api.md` | REST endpoints and request/response contracts. |
 | `specs/search/search-and-context-packs.md` | PostgreSQL FTS search and context pack behavior. |
-| `specs/implementation/internal-services.md` | Internal service responsibilities and function boundaries. |
-| `specs/implementation/repository-structure.md` | Required FastAPI/Python repository layout. |
-| `specs/implementation/code-quality.md` | Ruff, basedpyright, pytest, coverage, and suppression policy. |
-| `specs/implementation/python-style.md` | Python implementation style and layer conventions. |
-| `specs/implementation/ci-quality-gates.md` | Required CI checks and coverage gates. |
-| `specs/implementation/testing.md` | Mandatory test coverage and invariants. |
-| `specs/implementation/spec-driven-development.md` | Rules for maintaining the project from specs. |
-| `specs/implementation/open-questions.md` | Resolved implementation decisions and any future open gaps. |
-| `specs/implementation/ai-implementation-prompt.md` | Implementation prompt for an AI coding agent. |
 | `specs/features/*.feature` | Behavior specs in Gherkin. |
 | `specs/traceability/project-brief-coverage.md` | Coverage map proving the original brief was decomposed into specs. |
+| `standards/README.md` | Canonical index for engineering standards. |
+| `standards/backend/repository-structure.md` | Required FastAPI/Python repository layout. |
+| `standards/backend/internal-services.md` | Internal service responsibilities and function boundaries. |
+| `standards/python/code-quality.md` | Ruff, basedpyright, pytest, coverage, and suppression policy. |
+| `standards/python/style.md` | Python implementation style and layer conventions. |
+| `standards/ci-quality-gates.md` | Required CI checks and coverage gates. |
+| `standards/testing.md` | Mandatory test coverage and invariants. |
+| `standards/spec-driven-development.md` | Rules for maintaining the project from specs. |
+| `docs/decisions/resolved-questions.md` | Resolved decisions from formerly open questions. |
 | `docs/adr/*.md` | Architectural Decision Records. |
 | `AGENTS.md` | Operational instructions for coding agents. |
 
@@ -101,4 +101,4 @@ The product is functional when:
 
 ## Working From Specs
 
-Before implementing a feature, read the matching Markdown spec, technical implementation spec, Gherkin feature, ADR, and `AGENTS.md`. Any behavior or engineering-standard change must update the spec first, then implementation, then tests. If a requirement is missing or ambiguous, record it in `specs/implementation/open-questions.md` or create an ADR before coding the decision.
+Before implementing a feature, read the matching product spec, engineering standard, Gherkin feature, ADR, and `AGENTS.md`. Any behavior or engineering-standard change must update the spec/standard first, then implementation, then tests. If a requirement is missing or ambiguous, ask or record the decision in `docs/decisions/resolved-questions.md` before coding it.

@@ -29,7 +29,7 @@ No behavior change should land without an aligned spec change, a test change, or
 | 3 | Implement the smallest code change that satisfies the spec. |
 | 4 | Add or update tests mapped to the Gherkin scenario or invariant. |
 | 5 | Run relevant tests and quality gates. |
-| 6 | If implementation reveals ambiguity, update `specs/implementation/open-questions.md` or create an ADR. |
+| 6 | If implementation reveals ambiguity, update `docs/decisions/resolved-questions.md` or create an ADR. |
 
 ## AI Agent Instructions
 
@@ -42,7 +42,7 @@ No behavior change should land without an aligned spec change, a test change, or
 | Do not invent permissions | All read paths must use the shared readable memory query. |
 | Do not bypass the API boundary | No direct client access to database or derived indexes. |
 | Keep product boundaries | No LLM, embeddings, sessions, repositories, agents-as-principals, or batches unless specs change. |
-| Treat open questions as blockers | Do not silently choose product behavior listed in `specs/implementation/open-questions.md`. |
+| Treat open questions as blockers | Do not silently choose unspecified product behavior; ask or record the decision in `docs/decisions/resolved-questions.md`. |
 
 ## Traceability Expectations
 
@@ -54,7 +54,7 @@ No behavior change should land without an aligned spec change, a test change, or
 | Search/context pack code | `specs/search/search-and-context-packs.md`. |
 | Audit code | `specs/security/security-observability-audit.md`. |
 | Architectural patterns | ADR IDs. |
-| Python structure/style/tooling | `specs/implementation/*.md` technical standards. |
+| Python structure/style/tooling | `standards/**/*.md` technical standards. |
 
 ## Gherkin-To-Test Mapping
 

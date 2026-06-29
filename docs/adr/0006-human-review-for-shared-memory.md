@@ -40,5 +40,5 @@ Contributors can still propose knowledge without being blocked, but their shared
 | Spec | File |
 | --- | --- |
 | Authorization | `specs/security/authorization.md` |
-| Testing | `specs/implementation/testing.md` |
+| Testing | `standards/testing.md` |
 | Creation feature | `specs/features/memory_creation_and_review.feature` |

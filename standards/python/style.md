@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This spec defines how Python code should be written in Nexus. It complements `repository-structure.md`, `internal-services.md`, and `code-quality.md`.
+This standard defines how Python code should be written in Nexus. It complements `standards/backend/repository-structure.md`, `standards/backend/internal-services.md`, and `standards/python/code-quality.md`.
 
 The goal is boring, explicit, typed, maintainable code that new developers and agents can navigate quickly.
 
