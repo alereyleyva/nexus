@@ -6,7 +6,7 @@ The product is intentionally API-first and simple: AI tools submit structured me
 
 ## Current Status
 
-This repository contains the canonical product specifications for Nexus, organized for spec-driven implementation and maintenance.
+This repository contains the canonical product specifications and an initial FastAPI backend implementation aligned to the v1 specs. The backend includes SQLAlchemy models, Alembic migration scaffolding, authorization-critical services, REST routers, audit persistence, authorized search/context packs, and behavior-first tests.
 
 ## Spec Map
 
