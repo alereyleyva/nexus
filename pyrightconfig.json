@@ -1,0 +1,12 @@
+{
+  "typeCheckingMode": "strict",
+  "pythonVersion": "3.12",
+  "include": ["app", "tests"],
+  "exclude": [
+    ".venv",
+    "**/__pycache__",
+    "app/db/migrations/versions"
+  ],
+  "stubPath": "typings",
+  "reportMissingTypeStubs": "none"
+}
