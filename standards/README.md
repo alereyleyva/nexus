@@ -12,6 +12,8 @@ Product behavior lives under `specs/`. Engineering standards live here.
 | `agent-workflow.md` | Canonical workflow for coding agents. |
 | `backend/repository-structure.md` | Required FastAPI/Python repository and module layout. |
 | `backend/internal-services.md` | Internal service responsibilities and function boundaries. |
+| `backend/implementation-templates.md` | Deterministic sync FastAPI/SQLAlchemy module templates and layer skeletons. |
+| `backend/error-audit-patterns.md` | Project exception, Problem Details, and audit persistence implementation pattern. |
 | `python/style.md` | Python naming, imports, typing, FastAPI, Pydantic, SQLAlchemy, logging, and service style. |
 | `python/code-quality.md` | Ruff, basedpyright, pytest, coverage, and suppression policy. |
 | `testing.md` | Required test classes and invariant list. |
@@ -28,8 +30,11 @@ For Python implementation tasks, read:
 standards/spec-driven-development.md
 standards/agent-workflow.md
 standards/backend/repository-structure.md
+standards/backend/internal-services.md
 standards/python/style.md
 standards/python/code-quality.md
+standards/backend/implementation-templates.md
+standards/backend/error-audit-patterns.md
 ```
 
 For database tasks, also read:

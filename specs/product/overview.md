@@ -110,7 +110,7 @@ Important company knowledge often lives outside formal documentation: conversati
 | Project association safety | A memory can reference a project without becoming project-visible. |
 | Owning group access | A project inherits access from its owning group. |
 | External project user | A user outside the project does not see project memory. |
-| Org admin boundary | An org admin does not automatically read others' private memory. |
+| Org admin boundary | `is_org_admin = true` does not automatically read others' private memory. |
 | Restricted grants | Explicit grants allow restricted sharing. |
 | Audit | Sensitive operations are audited. |
 | No LLM | The API does not call an LLM. |

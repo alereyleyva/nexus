@@ -21,9 +21,9 @@ Feature: Memory read authorization
     Then the request is denied
     And an audit event "authorization.denied" is emitted
 
-  Scenario: Org admin cannot read private memory owned by another user
+  Scenario: Organization admin cannot read private memory owned by another user
     Given "pablo" owns an "active" private memory entry
-    And "fabio" has organization role "org_admin"
+    And "fabio" has organization admin capability
     When "fabio" requests the memory entry
     Then the request is denied
 

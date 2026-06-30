@@ -39,7 +39,7 @@ Authorization and visibility are product-critical. Tests must be behavior-first 
 | Invariant | Required proof |
 | --- | --- |
 | Cross-org isolation | A user cannot read memory from another organization. |
-| Org admin boundary | `org_admin` cannot read private memory owned by another user. |
+| Org admin boundary | `is_org_admin = true` cannot read private memory owned by another user. |
 | Private visibility | Private memory is readable only by owner. |
 | Restricted visibility | Restricted memory is readable by owner and explicit grantees only. |
 | Group visibility | Group memory is readable only by group members. |
@@ -55,7 +55,9 @@ Authorization and visibility are product-critical. Tests must be behavior-first 
 | Context pack safety | Context packs never return something search would not return. |
 | Denial audit | Every authorization denial emits audit event. |
 | Error envelope | Every non-2xx API response uses the common problem envelope. |
-| Admin boundary | `org_admin` can configure org structure but cannot read private memory or approve organization memory unless also `knowledge_admin`. |
+| Admin boundary | `is_org_admin = true` can configure org structure but cannot read private memory or approve organization memory unless `role = knowledge_admin`. |
+| Self-review denied | Owners/creators cannot approve, reject, or reconfirm their own shared memory. |
+| Bulk atomicity | Bulk create fails the whole request when any entry is invalid or unauthorized. |
 
 ## Effective Role Tests
 
@@ -83,6 +85,7 @@ Authorization and visibility are product-critical. Tests must be behavior-first 
 | Reviewer approves project memory | Status becomes `active`. |
 | Unauthorized contributor approves project memory | Denied and audited. |
 | Knowledge admin approves organization memory | Status becomes `active`. |
+| Creator tries to approve own shared memory | Denied and audited. |
 
 ## Auth Session Tests
 
@@ -90,6 +93,8 @@ Authorization and visibility are product-critical. Tests must be behavior-first 
 | --- | --- |
 | Google OIDC login creates session | Actor context resolves active user and org. |
 | CLI login exchange | Authorized CLI device code returns access token, refresh token, and session id. |
+| CLI token polling before approval | Returns `authorization_pending`. |
+| Reused CLI device code | Returns conflict and does not create another session. |
 | Disabled user uses existing access token | Request denied and audited. |
 | Revoked session uses access token | Request denied and audited. |
 | Refresh token rotation | New refresh token is returned and old token becomes used. |
@@ -101,11 +106,11 @@ Authorization and visibility are product-critical. Tests must be behavior-first 
 
 | Case | Expected result |
 | --- | --- |
-| Org admin creates group | Group created and admin audit event emitted. |
-| Org admin assigns project membership | Membership updated and effective role changes. |
+| `is_org_admin = true` creates group | Group created and admin audit event emitted. |
+| `is_org_admin = true` assigns project membership | Membership updated and effective role changes. |
 | Non org admin calls admin endpoint | Denied and audited. |
-| Org admin reads another user's private memory | Denied by normal memory authorization. |
-| Org admin alone approves organization memory | Denied unless also `knowledge_admin`. |
+| `is_org_admin = true` reads another user's private memory | Denied by normal memory authorization. |
+| `is_org_admin = true` alone approves organization memory | Denied unless `role = knowledge_admin`. |
 | Last org admin removal | Denied. |
 
 ## Error And Pagination Tests

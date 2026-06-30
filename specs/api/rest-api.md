@@ -31,6 +31,12 @@ X-Request-Id: <uuid>
 | No API LLM | No endpoint calls an LLM in the product. |
 | Error shape | Every non-2xx API error uses the common problem envelope. |
 
+## Resource Identifiers
+
+Public API identifiers are canonical UUID strings in v1. Do not introduce prefixed public ids such as `mem_123`, `usr_123`, `prj_123`, or `ses_123`.
+
+Example UUIDs in this spec are illustrative. Implementations must accept and return standard UUID strings for database-backed resources.
+
 ## Error Contract
 
 All non-2xx responses use `application/problem+json` and the ADR-0011 error envelope.
@@ -91,10 +97,25 @@ Security rules:
 
 | Rule | Requirement |
 | --- | --- |
-| Unauthorized reads | Detail reads for inaccessible memory may return `404 NOT_FOUND`; still emit `authorization.denied`. |
+| Unauthorized reads | Detail and mutation targets that are inaccessible return `404 NOT_FOUND`; still emit `authorization.denied`. |
 | Error details | Do not reveal whether another tenant's resource exists. |
 | Validation errors | Field errors may name invalid fields, but must not echo secret values. |
 | Client branching | Clients branch on HTTP status and `code`, not `detail`. |
+
+Endpoint-level status rules:
+
+| Case | HTTP status | Code |
+| --- | --- | --- |
+| Successful create | `201` | None |
+| Successful read/update/action | `200` | None |
+| Successful delete/revoke with no body | `204` | None |
+| CLI token polling still pending | `200` | None; body status is `authorization_pending`. |
+| Malformed cursor, malformed JSON, unsupported query shape | `400` | `BAD_REQUEST` |
+| Missing, invalid, expired, or revoked auth | `401` | `UNAUTHENTICATED` |
+| Authenticated actor lacks permission on a readable resource | `403` | `AUTHORIZATION_DENIED` |
+| Resource does not exist or is hidden from actor | `404` | `NOT_FOUND` |
+| Duplicate unique value, idempotency mismatch, invalid lifecycle state, or duplicate grant | `409` | `CONFLICT` |
+| Schema/domain validation failure | `422` | `VALIDATION_FAILED` |
 
 ## Pagination Contract
 
@@ -183,7 +204,7 @@ Initial sort orders:
 
 ### Admin Endpoints
 
-Admin endpoints require the user to have organization role `org_admin`. If the auth session is restricted, it must also include `admin:manage`.
+Admin endpoints require `org_memberships.is_org_admin = true`. If the auth session is restricted, it must also include `admin:manage`.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -192,7 +213,7 @@ Admin endpoints require the user to have organization role `org_admin`. If the a
 | GET | `/v1/admin/users/{user_id}` | Read user admin details. |
 | PATCH | `/v1/admin/users/{user_id}` | Update display name or status. |
 | GET | `/v1/admin/org-memberships` | List organization memberships and roles. |
-| PUT | `/v1/admin/org-memberships/{user_id}` | Set a user's organization role. |
+| PUT | `/v1/admin/org-memberships/{user_id}` | Set a user's organization knowledge role and admin capability. |
 | GET | `/v1/admin/groups` | List groups. |
 | POST | `/v1/admin/groups` | Create group. |
 | GET | `/v1/admin/groups/{group_id}` | Read group. |
@@ -212,13 +233,31 @@ Admin behavior:
 
 | Rule | Requirement |
 | --- | --- |
-| No memory bypass | `org_admin` does not read private/restricted memory unless normal memory authorization allows it. |
-| No approval by admin alone | `org_admin` does not approve organization-scoped memory unless also `knowledge_admin`. |
-| Org role changes | Changing `org_admin` or `knowledge_admin` assignments is audited and cannot remove the last `org_admin`. |
+| No memory bypass | `is_org_admin = true` does not read private/restricted memory unless normal memory authorization allows it. |
+| No approval by admin alone | `is_org_admin = true` does not approve organization-scoped memory unless `role = knowledge_admin`. |
+| Org membership changes | Changing `role` or `is_org_admin` is audited and cannot remove the last `is_org_admin = true` membership. |
 | Self role changes | A user cannot remove or downgrade their own last administrative access through normal API flows. |
-| Project membership | `org_admin` may configure project memberships; project `maintainer` may configure memberships for that project if future UI enables project-local admin. |
-| Group membership | `org_admin` may configure group memberships; group `lead` may manage group membership only if a later spec explicitly grants it. |
+| Project membership | `is_org_admin = true` may configure project memberships; project `maintainer` may configure memberships for that project if future UI enables project-local admin. |
+| Group membership | `is_org_admin = true` may configure group memberships; group `lead` may manage group membership only if a later spec explicitly grants it. |
 | Audit | User, role, group, project, and membership mutations emit admin audit events. |
+
+Organization membership update request:
+
+```json
+{
+  "role": "knowledge_admin",
+  "is_org_admin": true
+}
+```
+
+Rules:
+
+| Rule | Requirement |
+| --- | --- |
+| `role` | Must be `member` or `knowledge_admin`. |
+| `is_org_admin` | Boolean admin capability. |
+| Last admin | Request is rejected with `409 CONFLICT` if it would remove the last organization admin. |
+| Self-downgrade | Request is rejected with `409 CONFLICT` if it would remove the actor's last admin path. |
 
 ## Healthcheck
 
@@ -246,6 +285,8 @@ Behavior:
 | `/health/ready` | Checks required dependencies such as PostgreSQL. Return `503 SERVICE_UNAVAILABLE` when not ready. |
 
 ## OIDC And CLI Login
+
+The initial product supports Google SSO only. The only provider id required in v1 is `google`.
 
 ### List Providers
 
@@ -310,6 +351,18 @@ Behavior:
 | Capabilities | Requested capabilities become session restrictions after approval. They never expand user permissions. |
 | Max visibility | Requested `max_visibility_scope` caps create/visibility expansion for this session. |
 
+State machine:
+
+| From | Event | To | HTTP behavior |
+| --- | --- | --- | --- |
+| none | CLI starts authorization | `pending` | `201` with device code and verification URI. |
+| `pending` | CLI polls before approval | `pending` | `200` with `authorization_pending`. |
+| `pending` | User completes Google SSO | `approved` | Browser flow shows success. |
+| `pending` | User/system denies | `denied` | Token exchange returns `403 AUTHORIZATION_DENIED`. |
+| `pending` | Expiry time passes | `expired` | Token exchange returns `400 BAD_REQUEST` with safe detail. |
+| `approved` | CLI exchanges device code | `exchanged` | `200` with Nexus credentials. |
+| `exchanged` | CLI reuses device code | `exchanged` | `409 CONFLICT`. |
+
 ### Exchange CLI Login
 
 ```http
@@ -342,9 +395,9 @@ Successful response:
   "expires_in": 900,
   "refresh_token": "nxs_rt_...",
   "refresh_expires_in": 43200,
-  "session_id": "ses_123",
-  "org_id": "org_aircury",
-  "user_id": "usr_pablo",
+  "session_id": "33333333-3333-4333-8333-333333333333",
+  "org_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "user_id": "44444444-4444-4444-8444-444444444444",
   "capabilities": ["memory:create", "memory:read", "search:read"],
   "max_visibility_scope": "project"
 }
@@ -399,7 +452,7 @@ Request:
 
 ```json
 {
-  "project_id": "prj_cecw",
+  "project_id": "11111111-1111-4111-8111-111111111111",
   "type": "decision",
   "title": "Payment sync retries must use idempotency keys",
   "body": "Concurrent retries can process the same payment event more than once unless the retry path enforces idempotency.",
@@ -442,7 +495,7 @@ Response when actor is project contributor:
 
 ```json
 {
-  "id": "mem_123",
+  "id": "22222222-2222-4222-8222-222222222222",
   "status": "pending_review",
   "visibility_scope": "project",
   "requires_review": true
@@ -453,7 +506,7 @@ Response when actor is project reviewer or maintainer:
 
 ```json
 {
-  "id": "mem_123",
+  "id": "22222222-2222-4222-8222-222222222222",
   "status": "active",
   "visibility_scope": "project",
   "requires_review": false
@@ -488,12 +541,13 @@ Behavior:
 | Entry independence | Each entry has its own status, evidence, and audit behavior. |
 | No capture batch | Do not add a batch table or batch resource. |
 | Idempotency | Apply per-entry idempotency when `client_entry_id` is present. |
-| Partial failure | Prefer per-entry result objects over all-or-nothing only if implementation supports safe independent validation. |
+| Atomicity | v1 is all-or-nothing: validate authorization and schema for every entry before persisting; any invalid entry fails the whole request. |
+| Transaction | All created entries, evidence, search-vector updates, and audit events are committed in one transaction. |
 
 ## List Memory
 
 ```http
-GET /v1/memory-entries?project_id=prj_cecw&type=decision&tag=payments&limit=50&cursor=...
+GET /v1/memory-entries?project_id=11111111-1111-4111-8111-111111111111&type=decision&tag=payments&limit=50&cursor=...
 ```
 
 Query filters:
@@ -530,7 +584,7 @@ Behavior:
 | Rule | Requirement |
 | --- | --- |
 | Authorization | Use `readable_memory_entries(actor)`. |
-| Denial | Unauthorized reads are denied, may return `404`, and are audited. |
+| Denial | Unauthorized detail reads return `404 NOT_FOUND` and are audited. |
 | Evidence | May include evidence according to response schema implementation. |
 
 ## Edit Memory
@@ -561,6 +615,17 @@ Behavior:
 | Non-controller edits | Non-controller edits to active shared memory are denied; create a new proposal instead of silently rewriting approved truth. |
 | Search vector | Update search vector after content/tag/rationale changes. |
 | Audit | Emit `memory_entry.updated`. |
+
+Patch semantics:
+
+| Field class | Semantics |
+| --- | --- |
+| Omitted field | Leave unchanged. |
+| Nullable scalar sent as `null` | Clear the field if the field is mutable and nullable. |
+| `tags` array | Replace the full array. |
+| `metadata` object | Replace the full object. |
+| `source_context` object | Replace the full object only when the edit policy allows source metadata edits. |
+| Immutable fields | `id`, `org_id`, `owner_user_id`, `created_by_user_id`, `submitted_via_session_id`, `created_at`, and `deleted_at` are not patchable. |
 
 ## Review Memory
 
@@ -594,10 +659,12 @@ Behavior:
 | `reject` | Move `pending_review` memory to `rejected`. |
 | Any decision | Set reviewer fields and audit event. |
 
+Self-review is denied with `403 AUTHORIZATION_DENIED` when the reviewer is the owner or creator of the shared memory.
+
 ## Review Queue
 
 ```http
-GET /v1/review-queue?project_id=prj_cecw&status=pending_review&limit=50&cursor=...
+GET /v1/review-queue?project_id=11111111-1111-4111-8111-111111111111&status=pending_review&limit=50&cursor=...
 ```
 
 Filters:
@@ -619,15 +686,15 @@ Response:
 {
   "items": [
     {
-      "id": "mem_123",
+      "id": "22222222-2222-4222-8222-222222222222",
       "type": "decision",
       "title": "Payment sync retries must use idempotency keys",
       "body": "Concurrent retries must use idempotency keys.",
       "rationale": "Found during duplicate event debugging.",
       "status": "pending_review",
       "visibility_scope": "project",
-      "project_id": "prj_cecw",
-      "owner_user_id": "usr_pablo",
+      "project_id": "11111111-1111-4111-8111-111111111111",
+      "owner_user_id": "44444444-4444-4444-8444-444444444444",
       "source_tool": "codex",
       "confidence": 0.87,
       "evidence_count": 1,
@@ -734,7 +801,7 @@ Request:
 ```json
 {
   "visibility_scope": "project",
-  "project_id": "prj_cecw",
+  "project_id": "11111111-1111-4111-8111-111111111111",
   "reason": "This decision is useful for the whole project."
 }
 ```
@@ -743,7 +810,7 @@ Possible response:
 
 ```json
 {
-  "id": "mem_123",
+  "id": "22222222-2222-4222-8222-222222222222",
   "visibility_scope": "project",
   "status": "pending_review",
   "requires_review": true
@@ -770,7 +837,7 @@ Request:
 
 ```json
 {
-  "grantee_user_id": "usr_fabio",
+  "grantee_user_id": "55555555-5555-4555-8555-555555555555",
   "role": "viewer"
 }
 ```
@@ -780,7 +847,8 @@ Behavior:
 | Rule | Requirement |
 | --- | --- |
 | Scope | Grants are for restricted memory and concrete users. |
-| Duplicate | One grant per memory/user pair. |
+| Duplicate | One grant per memory/user pair; duplicate add returns `409 CONFLICT`. |
+| Roles | `viewer` reads, `editor` reads/edits, `manager` reads/edits/manages grants and may archive/delete restricted memory. |
 | Audit | Emit `memory_entry.grant_added`. |
 
 ## Delete Grant
@@ -807,7 +875,7 @@ Request:
 ```json
 {
   "query": "payment sync retries idempotency",
-  "project_id": "prj_cecw",
+  "project_id": "11111111-1111-4111-8111-111111111111",
   "types": ["decision", "problem", "solution", "failed_attempt"],
   "statuses": ["active", "needs_review"],
   "tags": ["payments"],
@@ -823,13 +891,13 @@ Response:
 {
   "results": [
     {
-      "id": "mem_123",
+      "id": "22222222-2222-4222-8222-222222222222",
       "type": "decision",
       "title": "Payment sync retries must use idempotency keys",
       "body": "Concurrent retries must use idempotency keys to avoid duplicate processing.",
       "status": "active",
       "visibility_scope": "project",
-      "project_id": "prj_cecw",
+      "project_id": "11111111-1111-4111-8111-111111111111",
       "tags": ["payments", "sync", "idempotency"],
       "score": 0.91,
       "evidence_count": 1
@@ -852,7 +920,7 @@ Request:
 
 ```json
 {
-  "project_id": "prj_cecw",
+  "project_id": "11111111-1111-4111-8111-111111111111",
   "task": "Continue work on payment sync retries",
   "query": "payment sync retries idempotency duplicate events",
   "max_items": 20,
@@ -872,12 +940,12 @@ Response:
 
 ```json
 {
-  "project_id": "prj_cecw",
+  "project_id": "11111111-1111-4111-8111-111111111111",
   "generated_at": "2026-06-28T12:00:00Z",
   "items": {
     "decisions": [
       {
-        "id": "mem_123",
+        "id": "22222222-2222-4222-8222-222222222222",
         "title": "Payment sync retries must use idempotency keys",
         "body": "Concurrent retries must use idempotency keys to avoid duplicate processing.",
         "status": "active",
@@ -910,19 +978,19 @@ Response:
 
 ```json
 {
-  "project_id": "prj_cecw",
+  "project_id": "11111111-1111-4111-8111-111111111111",
   "events": [
     {
       "timestamp": "2026-06-10T12:00:00Z",
       "event_type": "memory_entry.created",
-      "memory_entry_id": "mem_123",
+      "memory_entry_id": "22222222-2222-4222-8222-222222222222",
       "type": "decision",
       "title": "Payment sync retries must use idempotency keys"
     },
     {
       "timestamp": "2026-06-12T09:00:00Z",
       "event_type": "memory_entry.approved",
-      "memory_entry_id": "mem_123"
+      "memory_entry_id": "22222222-2222-4222-8222-222222222222"
     }
   ],
   "page": {

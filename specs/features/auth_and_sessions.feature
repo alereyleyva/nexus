@@ -1,6 +1,6 @@
 @core @auth
 Feature: Authentication and short-lived user sessions
-  The API authenticates real users through OIDC-backed Nexus sessions.
+  The API authenticates real users through Google OIDC-backed Nexus sessions.
   CLI credentials are short-lived, refreshable, revocable, and never become independent actors.
 
   Background:
@@ -22,6 +22,18 @@ Feature: Authentication and short-lived user sessions
     Then the CLI receives a Nexus access token
     And the CLI receives a refresh token
     And an audit event "auth.session.created" is emitted
+
+  Scenario: CLI token polling waits for browser approval
+    Given "pablo" runs "nexus login"
+    And the browser verification has not completed
+    When the CLI polls "POST /v1/auth/cli/token"
+    Then the API returns status "authorization_pending"
+
+  Scenario: CLI device code cannot be exchanged twice
+    Given "pablo" completed "nexus login" and exchanged the CLI device code
+    When the CLI exchanges the same device code again
+    Then the request is rejected with conflict
+    And no additional auth session is created
 
   Scenario: Disabled users cannot authenticate
     Given user "pablo" is disabled

@@ -65,11 +65,18 @@ Feature: Memory creation and review workflow
     Then the memory status is "active"
     And the response says review is not required
 
-  Scenario: Org admin alone does not approve organization memory
-    Given "pablo" has organization role "org_admin"
+  Scenario: Organization admin alone does not approve organization memory
+    Given "pablo" has organization admin capability
     And "pablo" does not have organization role "knowledge_admin"
     When "pablo" creates an "organization" memory entry
     Then the memory status is "pending_review"
+
+  Scenario: Creator cannot self-review shared memory
+    Given "pablo" has effective project role "reviewer" in project "CECW"
+    And "pablo" created a "pending_review" project memory entry in "CECW"
+    When "pablo" approves the memory entry with comment "Approving my own proposal"
+    Then the request is denied
+    And an audit event "authorization.denied" is emitted
 
   Scenario: Project reviewer approves project memory
     Given "pablo" has effective project role "contributor" in project "CECW"

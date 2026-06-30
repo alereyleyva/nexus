@@ -46,7 +46,7 @@ Responsibilities:
 | Manage group memberships | Add/update/remove user memberships. |
 | Manage projects | Create/update projects, owning group, and project status. |
 | Manage project memberships | Add/update/remove explicit project memberships. |
-| Enforce admin boundary | Require `org_admin`; never bypass memory read or review permissions. |
+| Enforce admin boundary | Require `is_org_admin = true`; never bypass memory read or review permissions. |
 | Audit admin changes | Emit admin audit events for all membership/permission mutations. |
 
 ## AuthorizationService
@@ -55,7 +55,7 @@ Responsibilities:
 
 | Responsibility | Requirement |
 | --- | --- |
-| Resolve organization role | Determine `member`, `knowledge_admin`, or `org_admin`. |
+| Resolve organization membership | Determine knowledge role (`member` or `knowledge_admin`) and `is_org_admin`. |
 | Resolve group memberships | Determine group IDs and group roles. |
 | Resolve effective project role | Combine owning group inheritance and explicit project membership. |
 | Validate creation | Return initial status and review requirement. |

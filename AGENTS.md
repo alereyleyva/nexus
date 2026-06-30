@@ -35,6 +35,9 @@ For Python implementation tasks, also read:
 
 ```text
 standards/backend/repository-structure.md
+standards/backend/internal-services.md
+standards/backend/implementation-templates.md
+standards/backend/error-audit-patterns.md
 standards/python/style.md
 standards/python/code-quality.md
 standards/ci-quality-gates.md

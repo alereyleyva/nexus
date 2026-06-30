@@ -64,6 +64,8 @@ Migrations must enforce domain invariants from specs when PostgreSQL can enforce
 | One grant per user/memory | Unique index on memory/grantee pair. |
 | Client idempotency | Partial unique index for non-null `client_entry_id`. |
 | Search | GIN index for PostgreSQL FTS vector. |
+| CLI auth one-time codes | Unique indexes on `device_code_hash` and `user_code_hash`; raw codes are never stored. |
+| Organization admin lookup | Index `org_memberships(org_id, is_org_admin)` and preserve at least one admin through service-level transaction checks. |
 
 ## Review Checklist
 

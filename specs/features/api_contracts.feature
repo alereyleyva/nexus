@@ -35,6 +35,12 @@ Feature: API contracts
     And no capture batch resource is created
     And each memory entry has its own status
 
+  Scenario: Bulk create is atomic when one entry is invalid
+    Given "pablo" can create project memory in "CECW"
+    When "pablo" posts one valid entry and one invalid entry to "POST /v1/memory-entries:bulk"
+    Then the request is rejected with validation failure
+    And no memory entries are created
+
   Scenario: GET memory uses readable memory query
     Given "pablo" cannot read a memory entry
     When "pablo" calls "GET /v1/memory-entries/{id}"
@@ -95,14 +101,14 @@ Feature: API contracts
     Then the response status is 200
     And the response body status is "ok"
 
-  Scenario: Org admin configures project membership through admin API
-    Given "pablo" has organization role "org_admin"
+  Scenario: Organization admin configures project membership through admin API
+    Given "pablo" has organization admin capability
     When "pablo" sets "fabio" as "reviewer" in project "CECW"
     Then the project membership is stored
     And an audit event "admin.project_membership_changed" is emitted
 
-  Scenario: Org admin cannot use admin role to read private memory
-    Given "pablo" has organization role "org_admin"
+  Scenario: Organization admin cannot use admin capability to read private memory
+    Given "pablo" has organization admin capability
     And "fabio" owns a private memory entry
     When "pablo" calls "GET /v1/memory-entries/{id}" for that memory
     Then the request is denied

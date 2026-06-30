@@ -44,6 +44,7 @@ Memory Entry
 | Project | Product, service, initiative, or work area owned by one group. |
 | Project Membership | Explicit project access for collaborators outside or above inherited group access. |
 | Auth Session | Revocable user session created by UI or CLI login. |
+| Auth CLI Authorization | Short-lived one-time browser approval record for `nexus login`. |
 | Auth Refresh Token | Opaque rotated credential for renewing a session. |
 | Memory Entry | Central knowledge unit. |
 | Memory Entry Evidence | Supporting evidence attached to a memory entry. |
@@ -95,11 +96,29 @@ Only active users are valid actors for normal authenticated operations.
 
 ## Org Membership
 
+Organization administration and organization knowledge approval are separate capabilities in v1. This avoids role-set complexity while preserving least privilege.
+
+Fields:
+
+| Field | Requirement |
+| --- | --- |
+| `role` | Knowledge role: `member` or `knowledge_admin`. |
+| `is_org_admin` | Boolean organization configuration capability. |
+
+Knowledge roles:
+
 | Role | Meaning |
 | --- | --- |
 | `member` | Normal organization user. |
 | `knowledge_admin` | Can approve organization-scoped memory. |
-| `org_admin` | Can manage users, groups, and projects. Does not automatically read private memory. |
+
+Admin capability:
+
+| Capability | Meaning |
+| --- | --- |
+| `is_org_admin = true` | Can manage users, organization memberships, groups, projects, and memberships. Does not automatically read private memory or approve organization-scoped memory. |
+
+A user may be `member` with `is_org_admin = true`, `knowledge_admin` with `is_org_admin = false`, both, or neither.
 
 ## Group
 
@@ -165,7 +184,7 @@ If multiple roles apply, the highest role wins by this level order:
 
 Auth sessions are revocable user sessions created by OIDC login. They are not actors. They restrict, never expand, user permissions.
 
-The first login provider is Google OIDC. The model must support future generic OIDC IdPs without changing memory authorization rules.
+The initial product login provider is Google OIDC. The auth module should keep provider logic behind an adapter boundary so future generic OIDC IdPs do not change memory authorization rules, but only Google is required in v1.
 
 | Field | Requirement |
 | --- | --- |
@@ -187,6 +206,42 @@ effective_permissions = user_permissions intersect session_capabilities intersec
 ```
 
 If `capabilities` is empty, session capabilities do not restrict endpoint capability checks. User permissions and authorization rules still apply.
+
+## Auth CLI Authorization
+
+CLI login uses browser SSO instead of static API keys.
+
+Lifecycle:
+
+| Status | Meaning |
+| --- | --- |
+| `pending` | CLI created a device authorization and is polling. |
+| `approved` | User completed Google SSO in browser and the authorization may be exchanged once. |
+| `denied` | User or system denied the authorization. |
+| `expired` | Authorization expired before exchange. |
+| `exchanged` | CLI exchanged the authorization for Nexus session credentials. |
+
+Fields:
+
+| Field | Requirement |
+| --- | --- |
+| `device_code_hash` | Hash of one-time CLI device code. Store no raw code. |
+| `user_code_hash` | Hash of browser verification code. Store no raw code. |
+| `requested_capabilities` | Capabilities requested by CLI before user approval. |
+| `max_visibility_scope` | Optional session visibility cap requested by CLI. |
+| `client_name` | Human/client label such as `nexus-cli`. |
+| `org_id`, `user_id` | Null while pending; set after successful Google SSO approval. |
+| `approved_session_id` | Auth session created during exchange. |
+| `expires_at`, `approved_at`, `exchanged_at` | Lifecycle timestamps. |
+
+Rules:
+
+| Rule | Requirement |
+| --- | --- |
+| One-time exchange | `approved` authorization may be exchanged once and then becomes `exchanged`. |
+| Expiry | Expired authorizations cannot be approved or exchanged. |
+| Storage | Store only code hashes. Do not audit or log raw codes. |
+| Capabilities | Requested capabilities restrict the resulting CLI session and never expand user permissions. |
 
 ## Auth Refresh Token
 
@@ -214,7 +269,7 @@ Refresh tokens are single-use. Reuse of an already used refresh token must revok
 | `search:read` | Execute searches. |
 | `context_pack:generate` | Generate context packs. |
 | `grants:manage` | Manage grants for owned or administrable entries. |
-| `admin:manage` | Use organization admin endpoints when the user is also `org_admin`. |
+| `admin:manage` | Use organization admin endpoints when the user also has `is_org_admin = true`. |
 | `auth:read` | Read current auth context when sessions are restricted. |
 | `auth:sessions:manage` | List and revoke own sessions when sessions are restricted. |
 
@@ -309,7 +364,7 @@ private < restricted < group < project < organization
 | Non-group visibility | Must not set `visibility_group_id`. |
 | Project visibility | Requires `project_id`. |
 | Project association | `project_id` alone never grants project visibility. |
-| Org admins | Do not automatically read private memory owned by others. |
+| Organization admins | `is_org_admin = true` does not automatically read private memory owned by others. |
 
 ## Memory Entry Grant
 
@@ -322,6 +377,14 @@ Grants only apply to `restricted` memory and only to concrete users.
 | `manager` | Can manage sharing where policy permits. |
 
 Do not use memory entry grants to model groups, projects, or organization visibility.
+
+Grant permissions:
+
+| Grant role | Read | Edit | Manage grants | Archive/delete |
+| --- | --- | --- | --- | --- |
+| `viewer` | Yes | No | No | No |
+| `editor` | Yes | Yes | No | No |
+| `manager` | Yes | Yes | Yes | Yes for restricted memory |
 
 ## Evidence
 

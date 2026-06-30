@@ -17,6 +17,7 @@ CI must run these checks for every pull request and before merging to the main b
 | Type checking | `uv run basedpyright` |
 | Tests | `uv run pytest` |
 | Coverage | `uv run coverage run -m pytest && uv run coverage report` |
+| Architecture checks | Project script or test that enforces layer/import/transaction boundaries. |
 | Spec hygiene | `git diff --check` or equivalent whitespace check. |
 
 Any failure blocks merge.
@@ -63,6 +64,21 @@ Initial CI may run only on Python 3.12 because Nexus targets Python 3.12. Add a 
 Tests that exercise database behavior must use PostgreSQL, not SQLite, because tenant isolation, constraints, JSONB, FTS, and transaction behavior are PostgreSQL-specific.
 
 The CI workflow should start PostgreSQL 16+ as a service and run Alembic migrations before integration tests once migrations exist.
+
+## Architecture Checks
+
+CI must include lightweight architecture checks once runtime code exists. Prefer stdlib AST-based tests or scripts over heavyweight dependencies.
+
+Required checks:
+
+| Check | Forbidden pattern |
+| --- | --- |
+| Router persistence boundary | `router.py` importing SQLAlchemy models, repositories, or sessions directly beyond dependency types. |
+| Repository transaction boundary | `repository.py` calling `commit`, `rollback`, or `begin`. |
+| Common isolation | `app/common` importing `app.modules.*`. |
+| HTTP error boundary | Raw `HTTPException` outside central error handling/router infrastructure. |
+| Memory read authorization | Client-returning direct `select(MemoryEntry)` paths outside authorization readable/reviewable query builders. |
+| Async DB drift | Runtime use of SQLAlchemy `AsyncSession` in v1. |
 
 ## Agent And Developer Expectations
 

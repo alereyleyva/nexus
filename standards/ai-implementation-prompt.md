@@ -15,6 +15,8 @@ Before coding, read:
 - specs/security/authorization.md
 - specs/data/schema.dbml
 - standards/backend/repository-structure.md
+- standards/backend/implementation-templates.md
+- standards/backend/error-audit-patterns.md
 - standards/python/style.md
 - standards/python/code-quality.md
 - standards/ci-quality-gates.md
@@ -41,6 +43,7 @@ Core architectural decisions:
 - Repository, branch, commit, PR, files, meeting data, document data, ticket data, and similar source metadata belong in source_context JSONB.
 - PostgreSQL is the source of truth.
 - The API is the only access path.
+- Public API resource identifiers are UUID strings.
 - Search, context packs, timeline, and detail reads must enforce the same authorization rules.
 
 Tech stack:
@@ -49,6 +52,7 @@ Tech stack:
 - FastAPI
 - Pydantic v2
 - SQLAlchemy 2
+- synchronous SQLAlchemy `Session`; do not use `AsyncSession` in v1
 - Alembic
 - PostgreSQL 16
 - pytest
@@ -78,6 +82,7 @@ Tables:
 - projects
 - project_memberships
 - auth_sessions
+- auth_cli_authorizations
 - auth_refresh_tokens
 - memory_entries
 - memory_entry_grants
@@ -113,17 +118,20 @@ Visibility scopes:
 Permission rules:
 - Private entries are readable only by owner.
 - Restricted entries are readable by owner plus explicit user grants.
-- Group entries are readable by members of visibility_group_id.
-- Project entries are readable by users with effective project access.
+- Group entries are readable by owner or members of visibility_group_id.
+- Project entries are readable by owner or users with effective project access.
 - Effective project access comes from explicit project_memberships plus membership in the owning group.
 - group.member of the owning group maps to project contributor.
 - group.lead of the owning group maps to project maintainer.
-- Organization entries are readable by active organization members.
-- Org admins do not automatically read private entries.
+- Organization entries are readable by owner or active organization members.
+- `is_org_admin = true` does not automatically read private entries or approve organization memory.
+- `role = knowledge_admin` approves organization-scoped entries.
+- Google SSO is the required v1 auth provider; CLI login uses browser SSO through `nexus login`.
 - Project contributors can create project-scoped entries, but they become pending_review.
 - Project reviewers and maintainers can approve project-scoped entries.
 - Group leads can approve group-scoped entries.
 - Knowledge admins can approve organization-scoped entries.
+- Self-review of shared memory is denied.
 - CLI sessions act on behalf of users and cannot exceed the user's permissions.
 - Search, context packs, timeline, and detail endpoints must all use the same readable memory query.
 - Pending, rejected, deprecated, and archived entries are hidden from normal search/context packs unless explicitly requested by an authorized reviewer/admin.
@@ -166,7 +174,7 @@ Endpoints:
 
 Testing requirements:
 - User cannot read entries from another org.
-- Org admin cannot read private entries by default.
+- `is_org_admin = true` cannot read private entries by default.
 - User cannot read project entries without effective project access.
 - User cannot read group entries without group membership.
 - User cannot read restricted entries without explicit grant.
@@ -190,6 +198,8 @@ Quality requirements:
 - Use `basedpyright` as the strict type checker; Ruff passing is not enough.
 - Use `pytest` and `coverage.py` for tests and coverage.
 - Follow `standards/backend/repository-structure.md` exactly; do not create generic `utils` modules.
+- Follow `standards/backend/implementation-templates.md` exactly for sync FastAPI/SQLAlchemy module structure.
+- Follow `standards/backend/error-audit-patterns.md` for exceptions, Problem Details, and audit persistence.
 - Follow `standards/python/style.md` for FastAPI, Pydantic, SQLAlchemy, service, repository, logging, and error style.
 - Run or report status for `uv run ruff format --check .`, `uv run ruff check .`, `uv run basedpyright`, `uv run pytest`, and coverage gates.
 

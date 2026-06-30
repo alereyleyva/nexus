@@ -60,14 +60,16 @@ readable_memory_entries(actor) + full text search
 
 | Filter | Behavior |
 | --- | --- |
-| `query` | Full text query. |
+| `query` | Full text query. Empty or omitted query is allowed only when at least one structured filter is present. |
 | `project_id` | Restrict to memory associated to project, without bypassing visibility. |
 | `types` | Restrict by memory types. |
 | `statuses` | Restrict by allowed statuses. Hidden statuses require explicit authorized mode. |
-| `tags` | Restrict by tags. |
+| `tags` | Restrict by tags using AND semantics: every requested tag must be present. |
 | `limit` | Limit result count. |
 | `cursor` | Continue from a previous search page using the common opaque cursor contract. |
 | `include_evidence` | Include evidence details or counts according to response schema. |
+
+Filter combination uses AND semantics across different filter classes.
 
 ## Default Search Statuses
 
@@ -82,7 +84,7 @@ readable_memory_entries(actor) + full text search
 
 ## Ranking
 
-Recommended initial score:
+Initial score is deterministic:
 
 ```text
 score = text_rank * 0.75
@@ -90,6 +92,16 @@ score = text_rank * 0.75
       + type_priority * 0.10
       + status_score * 0.05
 ```
+
+Component rules:
+
+| Component | Rule |
+| --- | --- |
+| `text_rank` | `ts_rank_cd(search_vector, websearch_to_tsquery('simple', query))`; use `0` when query is empty. |
+| `freshness_score` | `1.0` when `updated_at` is within 30 days, `0.5` within 180 days, otherwise `0.0`. |
+| `type_priority` | `1.0` high, `0.75` medium-high, `0.5` medium, `0.25` low. |
+| `status_score` | `1.0` for `active`, `0.5` for `needs_review`, `0.25` for explicitly requested `deprecated`, `0.0` for explicitly requested `archived`. |
+| Ordering | Sort by `score desc, updated_at desc, id desc`. |
 
 ## Type Priority For Context
 
@@ -114,7 +126,7 @@ Recommended metadata:
 ```json
 {
   "query_hash": "sha256:...",
-  "project_id": "prj_cecw",
+  "project_id": "11111111-1111-4111-8111-111111111111",
   "result_count": 8,
   "types": ["decision", "problem"]
 }
@@ -139,6 +151,18 @@ A context pack is a structured response that groups memory relevant to a task. I
 | Limits | Respect `max_items`. |
 | Warnings | Include warnings for `needs_review` memory. |
 | Audit | Emit `context_pack.generated`. |
+
+Context pack selection starts from search behavior with the same authorization, filters, score, and tie-breakers. It then groups selected items by memory type.
+
+Allocator rules:
+
+| Rule | Requirement |
+| --- | --- |
+| Type order | Fill groups in this order: `decision`, `procedure`, `risk`, `problem`, `solution`, `failed_attempt`, `open_question`, then optional `task`, `note`. |
+| Per-type ordering | Within each group, preserve search ordering. |
+| Max items | Stop when total selected items reaches `max_items`. |
+| Default `max_items` | `20`. |
+| Maximum `max_items` | `50`. |
 
 ## Context Pack Group Keys
 

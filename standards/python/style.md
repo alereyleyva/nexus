@@ -68,6 +68,7 @@ Forbidden dependencies:
 
 | Rule | Requirement |
 | --- | --- |
+| Execution model | Use synchronous route functions with synchronous SQLAlchemy `Session` in v1. Do not mix async persistence into app code. |
 | Routers are thin | Parse input, call service, return response. No business workflows. |
 | Dependencies | Shared request dependencies live in `app/dependencies.py` or focused module dependencies. |
 | Response models | Every endpoint has an explicit response schema unless returning `204`. |
@@ -91,6 +92,7 @@ Forbidden dependencies:
 | Rule | Requirement |
 | --- | --- |
 | Version | Use SQLAlchemy 2 style. |
+| Session type | Use synchronous SQLAlchemy `Session` in v1. |
 | Models | Models belong to their owning module unless shared by design. |
 | Session ownership | Request/session lifecycle is managed centrally, not inside repositories. |
 | Queries | Complex query builders should be named and tested. |
@@ -106,6 +108,7 @@ Forbidden dependencies:
 | Audit | Services call `AuditService` in the same workflow for sensitive operations. |
 | Return values | Use typed result objects for non-trivial decisions, not ad hoc dictionaries. |
 | Side effects | Make side effects explicit in method names or result types. |
+| Transactions | Services own write transaction boundaries and required audit writes. |
 
 ## Error Handling
 
@@ -113,7 +116,7 @@ Forbidden dependencies:
 | --- | --- |
 | Domain errors | Raise typed project exceptions, not raw `HTTPException` outside routers/common handlers. |
 | Error details | Never include secrets, raw credentials, or full request bodies. |
-| Not found vs denied | Follow `specs/api/rest-api.md`; inaccessible resources may return `404` while still auditing denial. |
+| Not found vs denied | Follow `specs/api/rest-api.md`; inaccessible resources return `404` while still auditing denial. |
 | Unexpected errors | Let centralized handlers convert them to `INTERNAL_ERROR` and log request id. |
 
 ## Logging

@@ -83,7 +83,37 @@ Each audit event includes:
 | No full secret-bearing bodies | Do not audit complete request bodies that may contain secrets. |
 | No raw search queries by default | Store query hash and metadata. |
 | Denials audited | Every authorization denial creates an event. |
-| Audit failures observable | Track audit write failures as a metric. |
+| Audit transaction | Sensitive operation audit events are written in the same service transaction as the operation. |
+| Audit failure behavior | If a required audit event cannot be persisted, the operation fails and rolls back. |
+| Audit failures observable | Track audit write failures as a metric and safe log event. |
+
+## Audit Metadata Allowlist
+
+Audit metadata must be small, structured, and safe. Store identifiers and classifications, not raw credential or memory bodies.
+
+| Event group | Allowed metadata examples | Forbidden metadata |
+| --- | --- | --- |
+| Memory create/update/review/lifecycle | `visibility_scope`, `status_before`, `status_after`, `project_id`, `memory_type`, `field_names_changed`, `reason_code` | Full `body`, full `rationale`, raw source payload, secret-bearing metadata. |
+| Grant changes | `grant_id`, `grantee_user_id`, `grant_role` | Full request body beyond allowlisted fields. |
+| Authorization denied | `endpoint`, `method`, `resource_type`, `resource_id` when safe, `reason_code` | Secret values, raw body, cross-tenant existence details. |
+| Search | `query_hash`, `project_id`, `types`, `statuses`, `tag_count`, `result_count` | Raw query text by default. |
+| Context pack | `query_hash`, `task_hash`, `project_id`, `max_items`, `result_count`, `warning_count` | Raw task text by default, generated summaries. |
+| Auth/session | `client_type`, `client_name`, `provider`, `session_id`, `reason_code` | Access tokens, refresh tokens, auth codes, device codes, user codes. |
+| Admin mutations | `target_user_id`, `group_id`, `project_id`, `role_before`, `role_after`, `is_org_admin_before`, `is_org_admin_after` | Full user profile payloads or secrets. |
+
+Stable denial reason codes:
+
+| Reason code | Meaning |
+| --- | --- |
+| `missing_capability` | Restricted session lacks required capability. |
+| `inactive_user` | User is disabled or not active. |
+| `revoked_session` | Session is revoked or expired. |
+| `cross_org` | Requested resource belongs to another organization or must be hidden as such. |
+| `visibility_audience_miss` | Actor is not in memory visibility audience. |
+| `not_reviewer` | Actor cannot review the memory scope. |
+| `self_review_denied` | Actor attempted to review own shared memory. |
+| `not_owner_or_manager` | Actor lacks owner/manager authority. |
+| `session_visibility_cap` | Session maximum visibility scope blocks the request. |
 
 ## Logs
 

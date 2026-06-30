@@ -23,8 +23,10 @@ class ActorContext(BaseModel):
 
 | Method | Use |
 | --- | --- |
-| OIDC web session | UI/API direct calls. |
-| OIDC CLI session | CLI/plugin/tool calls created by `nexus login`. |
+| Google OIDC web session | UI/API direct calls in v1. |
+| Google OIDC CLI session | CLI/plugin/tool calls created by `nexus login` in v1. |
+
+Google is the only required v1 SSO provider. Provider logic must stay behind an auth module adapter so future generic OIDC support does not affect authorization rules.
 
 Required headers:
 
@@ -90,9 +92,23 @@ Reviewers may query `pending_review` through explicit review endpoints only. `de
 | --- | --- |
 | `private` | Actor user is `owner_user_id`. |
 | `restricted` | Actor is owner or has explicit memory grant. |
-| `group` | Actor is member of `visibility_group_id`. |
-| `project` | Actor has an effective role in `project_id`. |
-| `organization` | Actor is an active member of the organization. |
+| `group` | Actor is owner or member of `visibility_group_id`. |
+| `project` | Actor is owner or has an effective role in `project_id`. |
+| `organization` | Actor is owner or is an active member of the organization. |
+
+Owner read access applies only to non-deleted memory in the actor's organization and remains subject to status/query-mode rules. Explicit memory grants apply only to `restricted` memory.
+
+## Status Read Modes
+
+| Query mode | Allowed statuses | Allowed actors |
+| --- | --- | --- |
+| `normal_read` | `active`, `needs_review` | Actors allowed by visibility read rules. |
+| `own_proposals` | `pending_review`, `rejected` | Owner only, for detail/list flows that explicitly request own proposals. |
+| `review_queue` | `pending_review`, optionally `needs_review` | Non-owner reviewer for the relevant shared scope. |
+| `deprecated` | `deprecated` | Actors allowed by visibility read rules when explicitly requested. |
+| `archived` | `archived` | Actors allowed by visibility read rules when explicitly requested. |
+
+Normal search and context packs use only `normal_read`. Review endpoints use `review_queue`, not a broader hidden-status read.
 
 ## Critical Read Path Rule
 
@@ -123,13 +139,16 @@ where me.org_id = :org_id
   and me.status in ('active', 'needs_review')
   and (
     me.owner_user_id = :actor_user_id
-    or exists (
-      select 1
-      from memory_entry_grants meg
-      where meg.org_id = me.org_id
-        and meg.memory_entry_id = me.id
-        and meg.grantee_user_id = :actor_user_id
-        and meg.role in ('viewer', 'editor', 'manager')
+    or (
+      me.visibility_scope = 'restricted'
+      and exists (
+        select 1
+        from memory_entry_grants meg
+        where meg.org_id = me.org_id
+          and meg.memory_entry_id = me.id
+          and meg.grantee_user_id = :actor_user_id
+          and meg.role in ('viewer', 'editor', 'manager')
+      )
     )
     or (
       me.visibility_scope = 'group'
@@ -156,9 +175,9 @@ The concrete SQL may differ, but behavior must not.
 | `restricted` | Any active org user. | `active` |
 | `group` | Group member. | `pending_review` for `member`, `active` for `lead`. |
 | `project` | Effective project `contributor`, `reviewer`, or `maintainer`. | `pending_review` for `contributor`, `active` for `reviewer`/`maintainer`. |
-| `organization` | Any active org member may propose. | `pending_review` for `member`, `active` for `knowledge_admin`. |
+| `organization` | Any active org member may propose. | `pending_review` for `member`, `active` for `role = knowledge_admin`. |
 
-`org_admin` does not automatically approve organization memory unless also `knowledge_admin`.
+`is_org_admin` does not automatically approve organization memory unless `role = knowledge_admin`.
 
 Session `max_visibility_scope`, when set, must be checked before user role checks. A session may not create or expand memory above its maximum visibility even if the user would otherwise be allowed.
 
@@ -170,23 +189,25 @@ Session `max_visibility_scope`, when set, must be checked before user role check
 | `restricted` | No approval required. |
 | `group` | `group.lead` of `visibility_group_id`. |
 | `project` | Effective project `reviewer` or `maintainer`. |
-| `organization` | `knowledge_admin`. |
+| `organization` | `role = knowledge_admin`. |
+
+Self-review is prohibited for shared memory. A user whose `user_id` equals `owner_user_id` or `created_by_user_id` cannot approve, reject, or reconfirm that memory through review endpoints, even if they otherwise have reviewer permissions for the scope.
 
 ## Admin Rules
 
-`org_admin` is an organization configuration role. It is not a memory read or knowledge approval bypass.
+`is_org_admin = true` is an organization configuration capability. It is not a memory read or knowledge approval bypass.
 
 | Operation | Requirement |
 | --- | --- |
-| Manage users | `org_admin`. |
-| Enable/disable users | `org_admin`; disabling a user invalidates future session use and refresh. |
-| Manage org roles | `org_admin`; cannot remove the last `org_admin`; self-downgrade is denied if it would remove the actor's last admin path. |
-| Manage groups | `org_admin`. |
-| Manage group memberships | `org_admin` in v1. Group lead management is future scope unless specified. |
-| Manage projects | `org_admin`. |
-| Manage project memberships | `org_admin` in v1. Project maintainer-local admin is future scope unless specified. |
-| Approve organization memory | `knowledge_admin`; `org_admin` alone is insufficient. |
-| Read private/restricted memory | Normal memory read rules only. `org_admin` has no bypass. |
+| Manage users | `is_org_admin = true`. |
+| Enable/disable users | `is_org_admin = true`; disabling a user invalidates future session use and refresh. |
+| Manage org roles/admin capability | `is_org_admin = true`; cannot remove the last `is_org_admin = true` membership; self-downgrade is denied if it would remove the actor's last admin path. |
+| Manage groups | `is_org_admin = true`. |
+| Manage group memberships | `is_org_admin = true` in v1. Group lead management is future scope unless specified. |
+| Manage projects | `is_org_admin = true`. |
+| Manage project memberships | `is_org_admin = true` in v1. Project maintainer-local admin is future scope unless specified. |
+| Approve organization memory | `role = knowledge_admin`; `is_org_admin = true` alone is insufficient. |
+| Read private/restricted memory | Normal memory read rules only. `is_org_admin = true` has no bypass. |
 
 Admin mutations must be audited. If a session is restricted, it also needs `admin:manage`.
 
@@ -206,9 +227,18 @@ Control over active shared memory means:
 | --- | --- |
 | `group` | `group.lead` for `visibility_group_id`. |
 | `project` | Effective project `reviewer` or `maintainer`. |
-| `organization` | `knowledge_admin`. |
+| `organization` | `role = knowledge_admin`. |
 
 For `private` and `restricted` memory, ownership and explicit grant roles control edit/manage behavior according to the restricted grant policy.
+
+Restricted grant policy:
+
+| Role | Read | Edit | Manage grants | Archive/delete restricted memory |
+| --- | --- | --- | --- | --- |
+| owner | Yes | Yes | Yes | Yes |
+| `viewer` grant | Yes | No | No | No |
+| `editor` grant | Yes | Yes | No | No |
+| `manager` grant | Yes | Yes | Yes | Yes |
 
 ## Visibility Change Rules
 
@@ -246,6 +276,15 @@ Archive keeps historical memory with status `archived`. Soft delete sets `delete
 ## Denial Rules
 
 Every authorization denial must create an `authorization.denied` audit event with request context and safe metadata. Do not include secrets or raw sensitive bodies in audit metadata.
+
+HTTP behavior:
+
+| Denial case | HTTP result |
+| --- | --- |
+| Missing/invalid/expired/revoked credentials | `401 UNAUTHENTICATED`. |
+| Detail or mutation target is not readable by actor | `404 NOT_FOUND` to avoid existence disclosure. |
+| Target is readable but actor lacks operation permission | `403 AUTHORIZATION_DENIED`. |
+| Operation is valid in principle but invalid for current lifecycle state | `409 CONFLICT`. |
 
 ## Implementation Services
 
