@@ -63,7 +63,7 @@ Initial CI may run only on Python 3.12 because Nexus targets Python 3.12. Add a 
 
 Tests that exercise database behavior must use PostgreSQL, not SQLite, because tenant isolation, constraints, JSONB, FTS, and transaction behavior are PostgreSQL-specific.
 
-The CI workflow should start PostgreSQL 16+ as a service and run Alembic migrations before integration tests once migrations exist.
+The CI workflow should start PostgreSQL 18.4 as a service and run Alembic migrations before integration tests once migrations exist. Local development uses `postgres:18.4-alpine`; CI may use the matching non-Alpine PostgreSQL 18.4 image if the CI platform requires it.
 
 ## Architecture Checks
 

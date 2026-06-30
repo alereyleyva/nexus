@@ -1,6 +1,6 @@
 Project nexus {
   database_type: 'PostgreSQL'
-  Note: 'Database model for Nexus. PostgreSQL 16+ recommended. Required extensions: pgcrypto, pg_trgm. Future optional extension: vector. PostgreSQL is the source of truth; vector stores are derived indexes only.'
+  Note: 'Database model for Nexus. PostgreSQL 18.4 is the v1 target. Local development uses postgres:18.4-alpine. Required extensions: pgcrypto, pg_trgm. Future optional extension: vector. PostgreSQL is the source of truth; vector stores are derived indexes only.'
 }
 
 Enum user_status {

@@ -54,12 +54,12 @@ Tech stack:
 - SQLAlchemy 2
 - synchronous SQLAlchemy `Session`; do not use `AsyncSession` in v1
 - Alembic
-- PostgreSQL 16
+- PostgreSQL 18.4
 - pytest
 - coverage.py
 - Ruff
 - basedpyright
-- docker-compose
+- Docker Compose with `postgres:18.4-alpine` for local development
 
 Core modules:
 - identity

@@ -59,12 +59,26 @@ This repository contains the canonical product specifications for Nexus, organiz
 | Schemas | Pydantic v2 |
 | ORM | SQLAlchemy 2 |
 | Migrations | Alembic |
-| Database | PostgreSQL 16+ |
+| Database | PostgreSQL 18.4 |
 | Tests | pytest |
 | Formatting/linting | Ruff |
 | Typing | basedpyright |
 | Coverage | coverage.py |
-| Local infra | docker-compose |
+| Local infra | Docker Compose using `postgres:18.4-alpine` |
+
+## Local Development Infrastructure
+
+Start the development database from the repository root:
+
+```sh
+docker compose up -d postgres
+```
+
+The local database uses the non-secret development defaults from `.env.example`:
+
+```text
+DATABASE_URL=postgresql+psycopg://nexus:nexus_dev_password@localhost:5432/nexus
+```
 
 ## Implementation Modules
 

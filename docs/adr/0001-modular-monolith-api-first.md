@@ -13,7 +13,7 @@ Microservices would add deployment, observability, transaction, and authorizatio
 
 Build the product as an API-first modular monolith.
 
-The v1 stack is Python 3.12, uv, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, PostgreSQL 16, pytest, coverage.py, Ruff, basedpyright, and docker-compose.
+The v1 stack is Python 3.12, uv, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, PostgreSQL 18.4, pytest, coverage.py, Ruff, basedpyright, and Docker Compose. Local development uses the `postgres:18.4-alpine` image.
 
 Initial modules:
 

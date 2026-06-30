@@ -8,7 +8,7 @@ Estimated duration: 3-5 days.
 | --- | --- |
 | Repository initial setup | Python/FastAPI project structure. |
 | FastAPI running | Basic app boots. |
-| Docker Compose | PostgreSQL available locally. |
+| Docker Compose | PostgreSQL available locally using `postgres:18.4-alpine`. |
 | Alembic | Migrations configured. |
 | Healthcheck | Basic health endpoint. |
 | Configuration | Environment-based settings. |

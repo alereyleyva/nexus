@@ -86,7 +86,7 @@ Root item responsibilities:
 | `uv.lock` | Locked dependency graph. |
 | `pyrightconfig.json` | basedpyright/Zed/CI type-checking configuration. |
 | `.env.example` | Non-secret environment variable documentation. |
-| `docker-compose.yml` | Local infrastructure such as PostgreSQL. |
+| `docker-compose.yml` | Local infrastructure, including PostgreSQL with `postgres:18.4-alpine`. |
 | `alembic.ini` | Alembic configuration. |
 | `app/` | Runtime application package. |
 | `tests/` | Automated tests. |
