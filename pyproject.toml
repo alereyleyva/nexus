@@ -59,6 +59,7 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Header", "fastapi.Query"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]
 "app/db/migrations/versions/*.py" = ["N999"]
+"scripts/**/*.py" = ["T20"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
