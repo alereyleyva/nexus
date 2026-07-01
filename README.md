@@ -4,6 +4,14 @@ Nexus is a governed shared memory layer for organizations and projects that work
 
 The product is intentionally API-first and simple: AI tools submit structured memory entries on behalf of real users, the API validates identity and authorization, PostgreSQL persists the source of truth, and search/context packs return only authorized memory.
 
+## Documentation
+
+- **[User Guide](docs/USER_GUIDE.md)** — install, use, configure, and integrate Nexus (start here if you *use* Nexus or wire an AI tool into it).
+- **[CLI reference](cli/README.md)** — the `nexus` command quick reference.
+- **[Web client](web/README.md)** — the browser app and its pages.
+- **[Production runbook](standards/deployment.md)** — deploy and operate the API and web SPA.
+- **[REST API contract](specs/api/rest-api.md)** — endpoints for direct integration.
+
 ## Current Status
 
 This repository contains the canonical product specifications and an initial FastAPI backend implementation aligned to the v1 specs. The backend includes SQLAlchemy models, Alembic migration scaffolding, authorization-critical services, REST routers, audit persistence, authorized search/context packs, and behavior-first tests.
