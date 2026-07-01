@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutList } from "lucide-react";
+import { LayoutList, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { listMemory } from "@/api/memory";
 import type { MemoryStatus, MemoryType, VisibilityScope } from "@/api/types";
 import { MemoryCard } from "@/components/MemoryCard";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { EmptyState, ErrorState, LoadingBlock } from "@/components/ui/feedback";
@@ -52,6 +53,13 @@ function MemoryPage() {
         eyebrow="Browse"
         title="Project Memory"
         description="Authorized memory across your projects. Server filters by project and status; the rest refine the results."
+        actions={
+          <Link to="/memory/new">
+            <Button variant="cta">
+              <Plus className="h-4 w-4" /> New memory
+            </Button>
+          </Link>
+        }
       />
 
       <div className="mb-6 grid grid-cols-1 gap-3 rounded-card bg-surface p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4">

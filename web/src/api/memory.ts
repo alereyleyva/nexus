@@ -1,5 +1,6 @@
 import { apiRequest } from "@/api/client";
 import type {
+  CreateMemoryRequest,
   MemoryEntry,
   MemoryListResponse,
   MemoryMutationResponse,
@@ -18,6 +19,10 @@ export function listMemory(params: ListMemoryParams = {}): Promise<MemoryListRes
   for (const status of params.statuses ?? []) query.append("status", status);
   query.set("limit", String(params.limit ?? 100));
   return apiRequest<MemoryListResponse>(`/v1/memory-entries?${query.toString()}`);
+}
+
+export function createMemory(body: CreateMemoryRequest): Promise<MemoryEntry> {
+  return apiRequest<MemoryEntry>("/v1/memory-entries", { method: "POST", body });
 }
 
 export function getMemory(id: string): Promise<MemoryEntry> {

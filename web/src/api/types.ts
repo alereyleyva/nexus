@@ -108,9 +108,34 @@ export interface MemoryEntry {
   evidence: Evidence[];
 }
 
+export interface CreateMemoryRequest {
+  type: MemoryType;
+  title: string;
+  body: string;
+  rationale?: string;
+  visibility_scope?: VisibilityScope;
+  project_id?: string;
+  visibility_group_id?: string;
+  source_tool: string;
+  source_kind: SourceKind;
+  tags?: string[];
+}
+
 export interface MemoryListResponse {
   items: MemoryEntry[];
   page: PageInfo;
+}
+
+export interface CliAuthorizationView {
+  client_name: string;
+  requested_capabilities: string[];
+  max_visibility_scope: VisibilityScope | null;
+  status: string;
+  expires_in: number;
+}
+
+export interface CliAuthorizationDecision {
+  status: string;
 }
 
 export interface MemoryMutationResponse {

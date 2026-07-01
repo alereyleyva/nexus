@@ -1,14 +1,36 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { BookMarked } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import { oidcAuthorizeUrl } from "@/api/auth";
 import { ApiError } from "@/api/client";
 import { useAuth } from "@/auth/auth";
+import { stashPostLoginRedirect, takePostLoginRedirect } from "@/auth/redirect";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
 import { LoadingBlock } from "@/components/ui/feedback";
 
-export const Route = createFileRoute("/login")({ component: LoginPage });
+interface LoginSearch {
+  redirect?: string;
+}
+
+export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
+  component: LoginPage,
+});
+
+function goAfterLogin(navigate: (opts: { to: "/memory" }) => Promise<void>): void {
+  const redirect = takePostLoginRedirect();
+  if (redirect) {
+    // Full-page nav preserves arbitrary internal paths (e.g. /cli/approve?code=…)
+    // without fighting the typed router; the persisted session survives the reload.
+    window.location.assign(redirect);
+  } else {
+    void navigate({ to: "/memory" });
+  }
+}
 
 const DEMO_USERS = [
   { email: "pablo@aircury.com", role: "Maintainer · Admin" },
@@ -19,9 +41,14 @@ const DEMO_USERS = [
 function LoginPage() {
   const { status, login } = useAuth();
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const [email, setEmail] = useState("pablo@aircury.com");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    stashPostLoginRedirect(redirect);
+  }, [redirect]);
 
   if (status === "loading") return <LoginFrame><LoadingBlock label="Checking session…" /></LoginFrame>;
   if (status === "authenticated") return <Navigate to="/memory" />;
@@ -32,7 +59,7 @@ function LoginPage() {
     setSubmitting(true);
     try {
       await login(email.trim());
-      await navigate({ to: "/memory" });
+      goAfterLogin(navigate);
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 404) {
         setError("Dev login is disabled. Start the API with NEXUS_DEV_LOGIN=true.");
@@ -45,8 +72,20 @@ function LoginPage() {
     }
   };
 
+  const signInWithGoogle = () => {
+    window.location.assign(oidcAuthorizeUrl());
+  };
+
   return (
     <LoginFrame>
+      <Button type="button" variant="primary" className="w-full" onClick={signInWithGoogle}>
+        Sign in with Google
+      </Button>
+      <div className="my-5 flex items-center gap-3 text-xs text-text-muted">
+        <span className="h-px flex-1 bg-surface-tint" />
+        <span className="eyebrow">or dev login</span>
+        <span className="h-px flex-1 bg-surface-tint" />
+      </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="Email">
           <Input

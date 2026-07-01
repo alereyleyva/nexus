@@ -6,6 +6,30 @@ The product is API-first, but a minimal UI and CLI/plugin contract help validate
 
 ## Minimal UI Views
 
+### Create Memory
+
+Purpose: capture a new memory entry from the web client through `POST /v1/memory-entries`.
+
+Form fields:
+
+| Field | Requirement |
+| --- | --- |
+| Type | Required memory type. |
+| Title | Required short title. |
+| Body | Required memory body. |
+| Rationale | Optional rationale. |
+| Visibility | Visibility scope; missing means `private`. |
+| Project | Required when visibility is `project`; used as context otherwise. |
+| Group | Required when visibility is `group`. |
+| Tags | Optional tags. |
+| Source tool | Optional free-text source tool. |
+
+The form submits to `POST /v1/memory-entries` and shows the resulting status
+(`active` or `pending_review`) returned by the API. It must not assume shared
+memory becomes `active`; when the API returns `pending_review`, the UI says the
+entry was proposed for review. Authorization and review outcomes are decided by the
+API, never by the client.
+
 ### Project Memory
 
 Purpose: browse authorized memory associated to a project.

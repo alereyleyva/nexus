@@ -1,7 +1,7 @@
 import { createContext, use, useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { devLogin, fetchMe, revokeSession } from "@/api/auth";
-import type { ActorContext } from "@/api/types";
+import type { ActorContext, TokenResponse } from "@/api/types";
 import { tokenStore } from "@/auth/tokenStore";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -10,6 +10,8 @@ interface AuthContextValue {
   status: AuthStatus;
   actor: ActorContext | null;
   login: (email: string) => Promise<void>;
+  /** Finalize a session from tokens obtained outside dev-login (e.g. OIDC). */
+  establishSession: (tokens: TokenResponse) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -42,13 +44,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(async (email: string) => {
-    const tokens = await devLogin(email);
+  const establishSession = useCallback(async (tokens: TokenResponse) => {
     tokenStore.setSession(tokens);
     const me = await fetchMe();
     setActor(me);
     setStatus("authenticated");
   }, []);
+
+  const login = useCallback(
+    async (email: string) => {
+      await establishSession(await devLogin(email));
+    },
+    [establishSession],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -62,8 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, actor, login, logout }),
-    [status, actor, login, logout],
+    () => ({ status, actor, login, establishSession, logout }),
+    [status, actor, login, establishSession, logout],
   );
 
   return <AuthContext value={value}>{children}</AuthContext>;

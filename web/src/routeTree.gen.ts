@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as CliApproveRouteImport } from './routes/cli/approve'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppReviewRouteImport } from './routes/_app/review'
 import { Route as AppContextPackRouteImport } from './routes/_app/context-pack'
 import { Route as AppMemoryIndexRouteImport } from './routes/_app/memory/index'
+import { Route as AppMemoryNewRouteImport } from './routes/_app/memory/new'
 import { Route as AppMemoryIdRouteImport } from './routes/_app/memory/$id'
 
 const LoginRoute = LoginRouteImport.update({
@@ -31,6 +34,16 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const CliApproveRoute = CliApproveRouteImport.update({
+  id: '/cli/approve',
+  path: '/cli/approve',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppSearchRoute = AppSearchRouteImport.update({
   id: '/search',
@@ -52,6 +65,11 @@ const AppMemoryIndexRoute = AppMemoryIndexRouteImport.update({
   path: '/memory/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMemoryNewRoute = AppMemoryNewRouteImport.update({
+  id: '/memory/new',
+  path: '/memory/new',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMemoryIdRoute = AppMemoryIdRouteImport.update({
   id: '/memory/$id',
   path: '/memory/$id',
@@ -64,7 +82,10 @@ export interface FileRoutesByFullPath {
   '/context-pack': typeof AppContextPackRoute
   '/review': typeof AppReviewRoute
   '/search': typeof AppSearchRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/cli/approve': typeof CliApproveRoute
   '/memory/$id': typeof AppMemoryIdRoute
+  '/memory/new': typeof AppMemoryNewRoute
   '/memory/': typeof AppMemoryIndexRoute
 }
 export interface FileRoutesByTo {
@@ -72,8 +93,11 @@ export interface FileRoutesByTo {
   '/context-pack': typeof AppContextPackRoute
   '/review': typeof AppReviewRoute
   '/search': typeof AppSearchRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/cli/approve': typeof CliApproveRoute
   '/': typeof AppIndexRoute
   '/memory/$id': typeof AppMemoryIdRoute
+  '/memory/new': typeof AppMemoryNewRoute
   '/memory': typeof AppMemoryIndexRoute
 }
 export interface FileRoutesById {
@@ -83,8 +107,11 @@ export interface FileRoutesById {
   '/_app/context-pack': typeof AppContextPackRoute
   '/_app/review': typeof AppReviewRoute
   '/_app/search': typeof AppSearchRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/cli/approve': typeof CliApproveRoute
   '/_app/': typeof AppIndexRoute
   '/_app/memory/$id': typeof AppMemoryIdRoute
+  '/_app/memory/new': typeof AppMemoryNewRoute
   '/_app/memory/': typeof AppMemoryIndexRoute
 }
 export interface FileRouteTypes {
@@ -95,7 +122,10 @@ export interface FileRouteTypes {
     | '/context-pack'
     | '/review'
     | '/search'
+    | '/auth/callback'
+    | '/cli/approve'
     | '/memory/$id'
+    | '/memory/new'
     | '/memory/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -103,8 +133,11 @@ export interface FileRouteTypes {
     | '/context-pack'
     | '/review'
     | '/search'
+    | '/auth/callback'
+    | '/cli/approve'
     | '/'
     | '/memory/$id'
+    | '/memory/new'
     | '/memory'
   id:
     | '__root__'
@@ -113,14 +146,19 @@ export interface FileRouteTypes {
     | '/_app/context-pack'
     | '/_app/review'
     | '/_app/search'
+    | '/auth/callback'
+    | '/cli/approve'
     | '/_app/'
     | '/_app/memory/$id'
+    | '/_app/memory/new'
     | '/_app/memory/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
+  CliApproveRoute: typeof CliApproveRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -145,6 +183,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/cli/approve': {
+      id: '/cli/approve'
+      path: '/cli/approve'
+      fullPath: '/cli/approve'
+      preLoaderRoute: typeof CliApproveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/search': {
       id: '/_app/search'
@@ -174,6 +226,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMemoryIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/memory/new': {
+      id: '/_app/memory/new'
+      path: '/memory/new'
+      fullPath: '/memory/new'
+      preLoaderRoute: typeof AppMemoryNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/memory/$id': {
       id: '/_app/memory/$id'
       path: '/memory/$id'
@@ -190,6 +249,7 @@ interface AppRouteChildren {
   AppSearchRoute: typeof AppSearchRoute
   AppIndexRoute: typeof AppIndexRoute
   AppMemoryIdRoute: typeof AppMemoryIdRoute
+  AppMemoryNewRoute: typeof AppMemoryNewRoute
   AppMemoryIndexRoute: typeof AppMemoryIndexRoute
 }
 
@@ -199,6 +259,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSearchRoute: AppSearchRoute,
   AppIndexRoute: AppIndexRoute,
   AppMemoryIdRoute: AppMemoryIdRoute,
+  AppMemoryNewRoute: AppMemoryNewRoute,
   AppMemoryIndexRoute: AppMemoryIndexRoute,
 }
 
@@ -207,6 +268,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
+  CliApproveRoute: CliApproveRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
