@@ -1,189 +1,114 @@
 # Nexus
 
-Nexus is a governed shared memory layer for organizations and projects that work with AI tools. Developers and teams can store reusable knowledge such as decisions, problems, solutions, failed attempts, procedures, risks, open questions, tasks, and notes.
+**Governed shared memory for teams that build with AI.**
 
-The product is intentionally API-first and simple: AI tools submit structured memory entries on behalf of real users, the API validates identity and authorization, PostgreSQL persists the source of truth, and search/context packs return only authorized memory.
+Nexus is the memory layer your AI tools have been missing. Decisions, problems,
+solutions, failed attempts, procedures, risks, open questions, tasks, and notes —
+captured once, reused everywhere, and always subject to who is actually allowed to
+see them.
 
-## Documentation
+AI assistants forget everything between sessions. Nexus gives them a durable,
+shared, and *governed* place to remember — so the knowledge your team generates
+stops evaporating into disconnected chat histories.
 
-- **[User Guide](docs/USER_GUIDE.md)** — install, use, configure, and integrate Nexus (start here if you *use* Nexus or wire an AI tool into it).
-- **[CLI reference](cli/README.md)** — the `nexus` command quick reference.
-- **[Web client](web/README.md)** — the browser app and its pages.
-- **[Production runbook](standards/deployment.md)** — deploy and operate the API and web SPA.
-- **[REST API contract](specs/api/rest-api.md)** — endpoints for direct integration.
+## Why Nexus
 
-## Current Status
+- **Reusable knowledge, not scattered chats.** Structured memory entries that
+  outlive any single conversation, tool, or teammate.
+- **Governed by design.** Every read and write is checked against real identity
+  and authorization. Private by default; sharing is deliberate and reviewable.
+- **API-first and tool-agnostic.** Any AI assistant, IDE plugin, or script can
+  contribute and retrieve memory through one clean REST API.
+- **A single source of truth.** PostgreSQL holds the canonical memory; search and
+  context packs return only what the caller is authorized to see.
+- **No LLM lock-in.** The intelligence lives in your tools. Nexus stays a fast,
+  predictable, auditable system of record.
 
-This repository contains the canonical product specifications and an initial FastAPI backend implementation aligned to the v1 specs. The backend includes SQLAlchemy models, Alembic migration scaffolding, authorization-critical services, REST routers, audit persistence, authorized search/context packs, and behavior-first tests.
+## What you can store
 
-## Spec Map
+Nexus treats a **memory entry** as the primary unit — no sessions, batches, or
+repositories required. Entries can capture:
 
-| File | Purpose |
+Decisions · Problems · Solutions · Failed attempts · Procedures · Risks ·
+Open questions · Tasks · Notes
+
+Each entry carries visibility (private, group, project, or organization), optional
+evidence, and a full audit trail.
+
+## How it works
+
+1. An AI tool submits a structured memory entry **on behalf of a real user**.
+2. Nexus validates identity and authorization, then persists the entry in
+   PostgreSQL — the source of truth.
+3. Shared memory (group, project, or organization) can require review before it
+   becomes visible.
+4. Search and **context packs** return only authorized memory, ready to drop into
+   a task, handover, or new AI session.
+
+## Product principles
+
+| Principle | What it means |
 | --- | --- |
-| `specs/README.md` | Canonical index for spec-driven development. |
-| `specs/product/overview.md` | Product goals, non-goals, scope, workflows, acceptance criteria. |
-| `specs/product/roadmap.md` | Delivery phases, future extensions, risks, and mitigations. |
-| `specs/product/ui-cli.md` | Minimal UI and CLI/plugin contracts. |
-| `specs/domain/model.md` | Domain entities, relationships, enums, states, visibility model. |
-| `specs/data/schema.dbml` | Database model in DBML. |
-| `specs/security/authorization.md` | Roles, effective permissions, auth session limits, read/write/review rules. |
-| `specs/security/security-observability-audit.md` | Security, privacy, audit, logs, and metrics. |
-| `specs/api/rest-api.md` | REST endpoints and request/response contracts. |
-| `specs/search/search-and-context-packs.md` | PostgreSQL FTS search and context pack behavior. |
-| `specs/features/*.feature` | Behavior specs in Gherkin. |
-| `specs/traceability/project-brief-coverage.md` | Coverage map proving the original brief was decomposed into specs. |
-| `standards/README.md` | Canonical index for engineering standards. |
-| `standards/backend/repository-structure.md` | Required FastAPI/Python repository layout. |
-| `standards/backend/internal-services.md` | Internal service responsibilities and function boundaries. |
-| `standards/python/code-quality.md` | Ruff, basedpyright, pytest, coverage, and suppression policy. |
-| `standards/python/style.md` | Python implementation style and layer conventions. |
-| `standards/ci-quality-gates.md` | Required CI checks and coverage gates. |
-| `standards/testing.md` | Mandatory test coverage and invariants. |
-| `standards/spec-driven-development.md` | Rules for maintaining the project from specs. |
-| `docs/decisions/resolved-questions.md` | Resolved decisions from formerly open questions. |
-| `docs/adr/*.md` | Architectural Decision Records. |
-| `AGENTS.md` | Operational instructions for coding agents. |
-
-## Product Principles
-
-| Principle | Requirement |
-| --- | --- |
-| Memory entry is the primary unit | Do not require AI/source sessions, messages, repositories, or batches as memory resources. |
+| Memory entry is the primary unit | No AI sessions, messages, or batches required to store knowledge. |
 | Users are permission actors | AI tools act on behalf of users and are recorded as source tools. |
-| API is the only entry point | No client may access PostgreSQL, vector stores, or search indexes directly. |
-| PostgreSQL is source of truth | Future vector stores are derived indexes only. |
-| Context and visibility are separate | A memory can reference a project without being visible to the project. |
+| API is the only entry point | No client touches PostgreSQL, vector stores, or search indexes directly. |
+| PostgreSQL is the source of truth | Any future vector store is a derived index, never authoritative. |
+| Context and visibility are separate | A memory can reference a project without being visible to it. |
 | Private by default | Missing visibility means `private`. |
 | Shared memory is governed | Group, project, and organization memory may require review. |
-| No LLM in the API | AI happens in clients/tools, not inside the API. |
+| No LLM in the API | AI happens in your clients and tools, never inside Nexus. |
 
-## Implementation Stack
+## Quickstart
 
-| Layer | Technology |
-| --- | --- |
-| Runtime | Python 3.12 |
-| Package manager | uv |
-| API | FastAPI |
-| Schemas | Pydantic v2 |
-| ORM | SQLAlchemy 2 |
-| Migrations | Alembic |
-| Database | PostgreSQL 18.4 |
-| Tests | pytest |
-| Formatting/linting | Ruff |
-| Typing | basedpyright |
-| Coverage | coverage.py |
-| Local infra | Docker Compose using `postgres:18.4-alpine` |
-
-## Local Development Infrastructure
-
-Start the development database from the repository root:
-
-```sh
-docker compose up -d postgres
-```
-
-The local database uses the non-secret development defaults from `.env.example`:
-
-```text
-DATABASE_URL=postgresql+psycopg://nexus:nexus_dev_password@localhost:5433/nexus
-```
-
-## Web Client
-
-The web UI is a React + TanStack Router SPA in `web/`, styled with Tailwind from
-`DESIGN.md`. It lives in this monorepo but **deploys separately** from the API and
-talks to it over the `/v1` API with CORS (ADR-0012). It never accesses the database
-or search indexes directly.
-
-Run the full stack locally:
+Run the full stack locally in four steps from the repository root:
 
 ```sh
 # 1. Database
 docker compose up -d postgres
 uv run alembic upgrade head
 
-# 2. Seed demo org/users/projects/memory
+# 2. Seed a demo org, users, projects, and memory
 uv run python -m scripts.seed_dev
 
-# 3. API with local dev-login enabled
+# 3. API (with local dev-login enabled)
 NEXUS_DEV_LOGIN=true uv run uvicorn app.main:app --reload
 
 # 4. Web client (separate terminal)
 cd web
 bun install
-bun run dev   # http://localhost:5173, calls the API at http://localhost:8000
+bun run dev   # http://localhost:5173, talks to the API at http://localhost:8000
 ```
 
 Sign in on the web login page with a seeded email such as `pablo@aircury.com`
 (maintainer/admin), `fabio@aircury.com` (contributor), or `carlos@aircury.com`
-(viewer). Dev-login is disabled unless `NEXUS_DEV_LOGIN=true` and never runs in
-production, where Google OIDC web login is the path.
+(viewer). Dev-login only works when `NEXUS_DEV_LOGIN=true` and never runs in
+production, where Google OIDC is the login path.
 
-## Implementation Modules
+## Documentation
 
-| Module | Responsibility |
-| --- | --- |
-| `identity` | Organizations, users, and org memberships. |
-| `auth` | OIDC login, CLI browser SSO, auth sessions, access JWT validation, refresh rotation. |
-| `admin` | Organization users, roles, groups, projects, and memberships. |
-| `groups` | Groups, teams, and memberships. |
-| `projects` | Projects, ownership, memberships, and timeline. |
-| `authorization` | Effective roles, policies, and readable memory query. |
-| `memory_entries` | Memory CRUD, evidence, grants, review, visibility changes. |
-| `search` | PostgreSQL full text search over authorized memory. |
-| `context_packs` | Structured authorized memory packs for tasks and handovers. |
-| `audit` | Audit events for sensitive actions and denials. |
+- **[User Guide](docs/USER_GUIDE.md)** — install, use, configure, and integrate
+  Nexus. Start here if you *use* Nexus or wire an AI tool into it.
+- **[CLI reference](cli/README.md)** — the `nexus` command quick reference.
+- **[Web client](web/README.md)** — the browser app and its pages.
+- **[REST API contract](specs/api/rest-api.md)** — endpoints for direct integration.
 
-## Definition Of Done
+## Under the hood
 
-The product is functional when:
+Nexus is built with FastAPI, Pydantic v2, SQLAlchemy 2, and PostgreSQL, and runs
+serverless on AWS. The React + TanStack Router web SPA deploys separately and
+talks to the API over `/v1`.
 
-| Capability | Expected result |
-| --- | --- |
-| Private memory | A user can create and read their own private memory. |
-| Project proposals | A contributor can propose project memory and it becomes `pending_review`. |
-| Review | A reviewer or maintainer can approve project memory. |
-| Authorization | Search, context packs, timeline, and detail reads use the same readable memory query. |
-| Isolation | Users cannot read memory from other organizations or unauthorized scopes. |
-| Grants | Restricted memory can be shared with explicit user grants. |
-| Audit | Sensitive operations and denied authorizations create audit events. |
-| Source of truth | PostgreSQL is the only source of truth. |
-| AI boundary | The API never calls an LLM in the product. |
-| Tests | Permission, review, search, context pack, session, admin, error, and audit invariants are automated. |
-| Quality gates | Ruff format/check, basedpyright, pytest, and coverage pass. |
+For contributors and operators:
 
-## Deployment
+- **[Specifications](specs/README.md)** — the canonical, spec-driven product and
+  domain definitions.
+- **[Engineering standards](standards/README.md)** — repository layout, code
+  quality, testing, and CI gates.
+- **[Production runbook](standards/deployment.md)** — deploy and operate the API
+  and web SPA on AWS.
+- **[Infrastructure](infra/README.md)** — the AWS CDK stacks.
+- **[AGENTS.md](AGENTS.md)** — operational instructions for coding agents.
 
-Production runs **serverless on AWS, provisioned with the AWS CDK** (ADR-0013).
-The full runbook is [`standards/deployment.md`](standards/deployment.md): SSM
-secrets read at runtime, consuming the existing RDS, Google OIDC provisioning,
-migrations as a discrete step, health smoke tests, scaling, backup/restore, and
-TLS/domains.
-
-The API and web SPA deploy as separate artifacts (ADR-0012):
-
-| Artifact | Hosting | Build context |
-| --- | --- | --- |
-| API | **Lambda** (container image + AWS Lambda Web Adapter) behind **API Gateway** | `Dockerfile` (root) — multi-stage uv build, non-root, uvicorn unchanged. |
-| Web SPA | **S3 + CloudFront** | `web/` via `bun run build` (needs `VITE_API_URL` at build time). |
-| Database | **Existing RDS PostgreSQL** — a new `nexus` database inside it | not provisioned here; referenced by CDK. |
-
-The CDK app lives in [`infra/`](infra/README.md) as **two independent stacks**
-(`Nexus-Api-<env>`, `Nexus-Web-<env>`). Secrets (`DATABASE_URL`,
-`NEXUS_TOKEN_SECRET`, `NEXUS_OIDC_CLIENT_SECRET`) live in **SSM Parameter Store
-(`SecureString`)** and are resolved at runtime — never plaintext in the Lambda
-definition or env vars. `NEXUS_DEV_LOGIN` must stay unset.
-
-```sh
-cd infra
-bun install
-bunx cdk diff && bunx cdk deploy --all    # provision/update both stacks
-aws ecs run-task ...                       # one-shot Fargate migrate (alembic upgrade head)
-```
-
-`docker-compose.prod.yml` is kept only as a **local, prod-like integration
-harness**; it is not the deploy path.
-
-## Working From Specs
-
-Before implementing a feature, read the matching product spec, engineering standard, Gherkin feature, ADR, and `AGENTS.md`. Any behavior or engineering-standard change must update the spec/standard first, then implementation, then tests. If a requirement is missing or ambiguous, ask or record the decision in `docs/decisions/resolved-questions.md` before coding it.
+> This project is developed spec-first: behavior and standards changes update the
+> relevant spec or standard before the implementation and tests. See
+> [`standards/spec-driven-development.md`](standards/spec-driven-development.md).
