@@ -2,8 +2,14 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
+
+# Env var values starting with this prefix are pointers to SSM Parameter Store
+# parameters resolved (and decrypted) at runtime, e.g. `ssm:/nexus/prod/token-secret`.
+# This keeps secret values out of the Lambda definition and env vars (ADR-0013).
+SSM_PREFIX = "ssm:"
 
 
 class Settings(BaseModel):
@@ -34,15 +40,42 @@ class Settings(BaseModel):
     cors_allow_origins: tuple[str, ...] = ("http://localhost:5173",)
 
 
-def _env_flag(name: str, default: bool) -> bool:
+def _resolve_ssm_parameter(name: str) -> str:
+    """Fetch and decrypt an SSM Parameter Store value at runtime."""
+    import boto3  # Imported lazily: only needed when an `ssm:` value is present.
+
+    client = cast("Any", boto3).client("ssm")
+    parameter = cast("dict[str, Any]", client.get_parameter(Name=name, WithDecryption=True))
+    value = parameter["Parameter"]["Value"]
+    if not isinstance(value, str):
+        raise TypeError(f"SSM parameter {name!r} did not return a string value.")
+    return value
+
+
+def _getenv(name: str) -> str | None:
+    """Read an env var, resolving an `ssm:<parameter>` value from SSM Parameter Store."""
     raw = os.getenv(name)
+    if raw is None:
+        return None
+    if raw.startswith(SSM_PREFIX):
+        return _resolve_ssm_parameter(raw.removeprefix(SSM_PREFIX))
+    return raw
+
+
+def _env(name: str, default: str) -> str:
+    value = _getenv(name)
+    return default if value is None else value
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    raw = _getenv(name)
     if raw is None:
         return default
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _env_origins(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
-    raw = os.getenv(name)
+    raw = _getenv(name)
     if raw is None:
         return default
     return tuple(origin.strip() for origin in raw.split(",") if origin.strip())
@@ -51,21 +84,19 @@ def _env_origins(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings(
-        database_url=os.getenv("DATABASE_URL", Settings.model_fields["database_url"].default),
-        token_secret=os.getenv("NEXUS_TOKEN_SECRET", Settings.model_fields["token_secret"].default),
-        public_base_url=os.getenv(
+        database_url=_env("DATABASE_URL", Settings.model_fields["database_url"].default),
+        token_secret=_env("NEXUS_TOKEN_SECRET", Settings.model_fields["token_secret"].default),
+        public_base_url=_env(
             "NEXUS_PUBLIC_BASE_URL", Settings.model_fields["public_base_url"].default
         ),
-        web_base_url=os.getenv("NEXUS_WEB_BASE_URL", Settings.model_fields["web_base_url"].default),
+        web_base_url=_env("NEXUS_WEB_BASE_URL", Settings.model_fields["web_base_url"].default),
         dev_login_enabled=_env_flag("NEXUS_DEV_LOGIN", False),
-        dev_login_org_slug=os.getenv(
+        dev_login_org_slug=_env(
             "NEXUS_DEV_LOGIN_ORG_SLUG", Settings.model_fields["dev_login_org_slug"].default
         ),
-        oidc_client_id=os.getenv("NEXUS_OIDC_CLIENT_ID", ""),
-        oidc_client_secret=os.getenv("NEXUS_OIDC_CLIENT_SECRET", ""),
-        oidc_org_slug=os.getenv(
-            "NEXUS_OIDC_ORG_SLUG", Settings.model_fields["oidc_org_slug"].default
-        ),
+        oidc_client_id=_env("NEXUS_OIDC_CLIENT_ID", ""),
+        oidc_client_secret=_env("NEXUS_OIDC_CLIENT_SECRET", ""),
+        oidc_org_slug=_env("NEXUS_OIDC_ORG_SLUG", Settings.model_fields["oidc_org_slug"].default),
         web_login_redirect_uris=_env_origins(
             "NEXUS_WEB_LOGIN_REDIRECT_URIS",
             Settings.model_fields["web_login_redirect_uris"].default,
