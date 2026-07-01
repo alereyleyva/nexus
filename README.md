@@ -77,7 +77,7 @@ docker compose up -d postgres
 The local database uses the non-secret development defaults from `.env.example`:
 
 ```text
-DATABASE_URL=postgresql+psycopg://nexus:nexus_dev_password@localhost:5432/nexus
+DATABASE_URL=postgresql+psycopg://nexus:nexus_dev_password@localhost:5433/nexus
 ```
 
 ## Implementation Modules

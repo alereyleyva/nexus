@@ -11,7 +11,7 @@ class Settings(BaseModel):
 
     service_name: str = "nexus-api"
     version: str = "0.1.0"
-    database_url: str = "postgresql+psycopg://nexus:nexus_dev_password@localhost:5432/nexus"
+    database_url: str = "postgresql+psycopg://nexus:nexus_dev_password@localhost:5433/nexus"
     token_secret: str = Field(default="dev-only-nexus-token-secret-change-me", min_length=24)
     token_issuer: str = "nexus-api"  # noqa: S105 - JWT issuer identifier, not a password.
     token_audience: str = "nexus-api"  # noqa: S105 - JWT audience identifier, not a password.
