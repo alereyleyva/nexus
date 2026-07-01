@@ -1,0 +1,26 @@
+{
+  "name": "nexus-infra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AWS CDK (TypeScript) infrastructure for Nexus: API and web stacks.",
+  "bin": {
+    "nexus": "bin/nexus.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy --all"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "aws-cdk": "^2.170.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.6.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.170.0",
+    "constructs": "^10.4.2"
+  }
+}

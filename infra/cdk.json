@@ -1,0 +1,46 @@
+{
+  "app": "npx ts-node --prefer-ts-exts bin/nexus.ts",
+  "watch": {
+    "include": ["**"],
+    "exclude": ["README.md", "cdk*.json", "**/*.d.ts", "**/*.js", "node_modules", "cdk.out"]
+  },
+  "context": {
+    "env": "prod",
+    "environments": {
+      "prod": {
+        "account": "REPLACE_WITH_AWS_ACCOUNT_ID",
+        "region": "eu-west-1",
+        "vpcId": "vpc-REPLACE",
+        "rdsSecurityGroupId": "sg-REPLACE",
+        "dbPort": 5432,
+        "manageRdsIngress": true,
+        "ssm": {
+          "databaseUrl": "/nexus/prod/database-url",
+          "tokenSecret": "/nexus/prod/token-secret",
+          "oidcClientSecret": "/nexus/prod/oidc-client-secret",
+          "kmsKeyArn": ""
+        },
+        "oidcClientId": "REPLACE_WITH_GOOGLE_OAUTH_CLIENT_ID",
+        "oidcOrgSlug": "aircury",
+        "publicBaseUrl": "https://api.nexus.example.com",
+        "webBaseUrl": "https://app.nexus.example.com",
+        "webLoginRedirectUris": "https://app.nexus.example.com/auth/callback",
+        "corsOrigins": "https://app.nexus.example.com"
+      }
+    },
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/core:target-partitions": ["aws", "aws-cn"],
+    "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": true,
+    "@aws-cdk/aws-ec2:uniqueImdsv2TemplateName": true,
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/core:validateSnapshotRemovalPolicy": true,
+    "@aws-cdk/aws-s3:createDefaultLoggingPolicy": true,
+    "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": true,
+    "@aws-cdk/core:enablePartitionLiterals": true,
+    "@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker": true,
+    "@aws-cdk/aws-apigateway:disableCloudWatchRole": true,
+    "@aws-cdk/aws-cloudfront:defaultSecurityPolicyTLSv1.2_2021": true,
+    "@aws-cdk/aws-lambda:useCdkManagedLogGroup": false
+  }
+}
