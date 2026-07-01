@@ -1,0 +1,16 @@
+# Keep host build artifacts and deps out of the SPA build context.
+node_modules
+dist
+dist-ssr
+.tanstack
+.output
+.vinxi
+.wrangler
+.nitro
+.env
+.env.*
+!.env.example
+.DS_Store
+*.local
+Dockerfile
+.dockerignore

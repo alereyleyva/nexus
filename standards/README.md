@@ -21,6 +21,7 @@ Product behavior lives under `specs/`. Engineering standards live here.
 | `ci-quality-gates.md` | Required CI checks and coverage thresholds. |
 | `dependency-management.md` | Dependency tooling, groups, versioning, and package acceptance rules. |
 | `database-migrations.md` | DBML/Alembic migration contract and review checklist. |
+| `deployment.md` | Production deployment runbook: images, env/secrets, OIDC, migrations, scaling, backups, TLS. |
 | `ai-implementation-prompt.md` | Prompt for coding agents. |
 
 ## Required Reading

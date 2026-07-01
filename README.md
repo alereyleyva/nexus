@@ -144,6 +144,31 @@ The product is functional when:
 | Tests | Permission, review, search, context pack, session, admin, error, and audit invariants are automated. |
 | Quality gates | Ruff format/check, basedpyright, pytest, and coverage pass. |
 
+## Deployment
+
+Production deployment is documented in the runbook at
+[`standards/deployment.md`](standards/deployment.md): required env vars and
+secrets, Google OIDC provisioning, migrations as a deploy step, health/readiness
+endpoints, horizontal scaling, Postgres backup/restore, and TLS expectations.
+
+The API and web SPA ship as separate images (ADR-0012):
+
+| Artifact | Build context |
+| --- | --- |
+| API image | `Dockerfile` (root) — multi-stage uv build, non-root, uvicorn. |
+| Web image | `web/Dockerfile` — bun build served by nginx (needs `--build-arg VITE_API_URL`). |
+
+A reference stack is provided in `docker-compose.prod.yml` (postgres, a one-shot
+`migrate` service, and the `api`; `web` is optional). Secrets must come from a
+secret manager and `NEXUS_DEV_LOGIN` must stay unset in production.
+
+```sh
+# Provide secrets/URLs via the environment or an untracked .env, then:
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml run --rm migrate   # alembic upgrade head
+docker compose -f docker-compose.prod.yml up -d
+```
+
 ## Working From Specs
 
 Before implementing a feature, read the matching product spec, engineering standard, Gherkin feature, ADR, and `AGENTS.md`. Any behavior or engineering-standard change must update the spec/standard first, then implementation, then tests. If a requirement is missing or ambiguous, ask or record the decision in `docs/decisions/resolved-questions.md` before coding it.

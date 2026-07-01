@@ -1,0 +1,98 @@
+# Production-oriented Compose stack for Nexus.
+#
+# This file is a reference deployment (single host / small footprint) and a
+# template for orchestrators. Secrets MUST come from the environment / a secret
+# manager, never from a committed file. See standards/deployment.md.
+#
+# Quickstart:
+#   1. Provide required env vars (export them or use an untracked .env):
+#        NEXUS_TOKEN_SECRET, NEXUS_OIDC_CLIENT_ID, NEXUS_OIDC_CLIENT_SECRET,
+#        POSTGRES_PASSWORD, NEXUS_PUBLIC_BASE_URL, NEXUS_WEB_BASE_URL,
+#        NEXUS_CORS_ORIGINS, NEXUS_WEB_LOGIN_REDIRECT_URIS, VITE_API_URL
+#   2. docker compose -f docker-compose.prod.yml build
+#   3. docker compose -f docker-compose.prod.yml up -d
+# The `migrate` one-shot runs `alembic upgrade head` before the API starts.
+
+services:
+  postgres:
+    image: postgres:18.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nexus}
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      # No default: the password must be supplied in production.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - nexus_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Not published by default; the API reaches it over the compose network.
+    # Uncomment to expose for administration/backups from the host.
+    # ports:
+    #   - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+
+  # One-shot migration step. Runs to completion, then exits. Keep migrations a
+  # discrete deploy step (never in the API entrypoint) so replicas don't race.
+  migrate:
+    image: ${NEXUS_API_IMAGE:-nexus-api:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nexus}}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    image: ${NEXUS_API_IMAGE:-nexus-api:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nexus}}
+      # Signing secret for access tokens, refresh/login-code hashes, OIDC state.
+      NEXUS_TOKEN_SECRET: ${NEXUS_TOKEN_SECRET:?NEXUS_TOKEN_SECRET is required}
+      # Public URLs used to build OIDC redirect and CLI verification links.
+      NEXUS_PUBLIC_BASE_URL: ${NEXUS_PUBLIC_BASE_URL:?NEXUS_PUBLIC_BASE_URL is required}
+      NEXUS_WEB_BASE_URL: ${NEXUS_WEB_BASE_URL:?NEXUS_WEB_BASE_URL is required}
+      # Google OIDC (server-only secret; never shipped to the CLI or SPA).
+      NEXUS_OIDC_CLIENT_ID: ${NEXUS_OIDC_CLIENT_ID:?NEXUS_OIDC_CLIENT_ID is required}
+      NEXUS_OIDC_CLIENT_SECRET: ${NEXUS_OIDC_CLIENT_SECRET:?NEXUS_OIDC_CLIENT_SECRET is required}
+      NEXUS_OIDC_ORG_SLUG: ${NEXUS_OIDC_ORG_SLUG:-aircury}
+      # Allowlisted SPA callback(s), e.g. https://app.example.com/auth/callback
+      NEXUS_WEB_LOGIN_REDIRECT_URIS: ${NEXUS_WEB_LOGIN_REDIRECT_URIS:?NEXUS_WEB_LOGIN_REDIRECT_URIS is required}
+      # Cross-origin allowlist for the web client, e.g. https://app.example.com
+      NEXUS_CORS_ORIGINS: ${NEXUS_CORS_ORIGINS:?NEXUS_CORS_ORIGINS is required}
+      # NEXUS_DEV_LOGIN is intentionally UNSET: dev-login must be OFF in production.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${NEXUS_API_PORT:-8000}:8000"
+
+  # Optional: build and serve the SPA. VITE_API_URL is baked at BUILD time and
+  # must point at the public API URL. Rebuild the image to change it.
+  web:
+    image: ${NEXUS_WEB_IMAGE:-nexus-web:latest}
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:?VITE_API_URL is required (build-time API base URL)}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${NEXUS_WEB_PORT:-8080}:80"
+
+volumes:
+  nexus_postgres_data:

@@ -1,0 +1,43 @@
+# Version control and CI
+.git
+.github
+.gitignore
+
+# Python virtualenv and caches
+.venv
+**/__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+coverage.xml
+htmlcov
+
+# Tests and local tooling (not needed in the runtime image)
+tests
+pyrightconfig.json
+
+# Web client — built and shipped by web/Dockerfile, not the API image
+web/node_modules
+web/dist
+web/.tanstack
+web/.output
+
+# Local environment and secrets — never bake into an image
+.env
+.env.*
+!.env.example
+
+# Editor / OS cruft and scratch
+.vscode
+.idea
+.DS_Store
+scratch
+scratchpad
+*.log
+
+# Docs and specs are not needed at runtime
+docs
+specs
+standards
