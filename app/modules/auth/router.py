@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
+from starlette.responses import RedirectResponse
 
 from app.dependencies import get_actor_context, get_db_session, require_session_capability
 from app.modules.auth.models import AuthClientType
@@ -23,6 +24,7 @@ from app.modules.auth.schemas import (
     StartCliAuthorizationRequest,
     StartCliAuthorizationResponse,
     TokenResponse,
+    WebSessionRequest,
 )
 from app.modules.auth.service import AuthService
 from app.modules.auth.types import ActorContext
@@ -102,12 +104,41 @@ def exchange_cli_token(
     return result
 
 
+@router.get("/oidc/{provider}/authorize")
+def oidc_authorize(
+    provider: str,
+    redirect_uri: str = Query(min_length=1),
+    db: Session = Depends(get_db_session),
+) -> RedirectResponse:
+    url = AuthService(db).build_oidc_authorization_url(provider=provider, redirect_uri=redirect_uri)
+    return RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
+
+
+@router.get("/oidc/{provider}/callback")
+def oidc_callback(
+    provider: str,
+    code: str = Query(min_length=1),
+    state: str = Query(min_length=1),
+    db: Session = Depends(get_db_session),
+) -> RedirectResponse:
+    target = AuthService(db).complete_oidc_login(provider=provider, code=code, state=state)
+    return RedirectResponse(url=target, status_code=status.HTTP_302_FOUND)
+
+
 @router.post("/web/dev-login", response_model=TokenResponse)
 def dev_login(
     request: DevLoginRequest,
     db: Session = Depends(get_db_session),
 ) -> TokenResponse:
     return AuthService(db).dev_login(email=request.email)
+
+
+@router.post("/web/session", response_model=TokenResponse)
+def exchange_web_login(
+    request: WebSessionRequest,
+    db: Session = Depends(get_db_session),
+) -> TokenResponse:
+    return AuthService(db).exchange_web_login(login_code=request.login_code)
 
 
 @router.post("/session/refresh", response_model=TokenResponse)

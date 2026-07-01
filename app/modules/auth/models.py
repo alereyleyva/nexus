@@ -91,6 +91,24 @@ class AuthCliAuthorization(Base):
     )
 
 
+class AuthWebLogin(Base):
+    __tablename__ = "auth_web_logins"
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=new_uuid)
+    org_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("organizations.id"))
+    user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"))
+    session_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("auth_sessions.id"))
+    login_code_hash: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    __table_args__ = (
+        Index("auth_web_logins_login_code_hash_unique", "login_code_hash", unique=True),
+        Index("auth_web_logins_session_idx", "org_id", "session_id"),
+    )
+
+
 class AuthRefreshToken(Base):
     __tablename__ = "auth_refresh_tokens"
 

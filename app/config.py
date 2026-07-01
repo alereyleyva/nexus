@@ -23,6 +23,13 @@ class Settings(BaseModel):
     web_base_url: str = "http://localhost:5173"
     dev_login_enabled: bool = False
     dev_login_org_slug: str = "aircury"
+    # Google OIDC production login. Empty client id/secret means OIDC is not configured.
+    oidc_client_id: str = ""
+    oidc_client_secret: str = ""
+    oidc_org_slug: str = "aircury"
+    oidc_state_seconds: int = 600
+    web_login_seconds: int = 300
+    web_login_redirect_uris: tuple[str, ...] = ("http://localhost:5173/auth/callback",)
     # Frontend and API deploy separately; the web client calls the API cross-origin.
     cors_allow_origins: tuple[str, ...] = ("http://localhost:5173",)
 
@@ -53,6 +60,15 @@ def get_settings() -> Settings:
         dev_login_enabled=_env_flag("NEXUS_DEV_LOGIN", False),
         dev_login_org_slug=os.getenv(
             "NEXUS_DEV_LOGIN_ORG_SLUG", Settings.model_fields["dev_login_org_slug"].default
+        ),
+        oidc_client_id=os.getenv("NEXUS_OIDC_CLIENT_ID", ""),
+        oidc_client_secret=os.getenv("NEXUS_OIDC_CLIENT_SECRET", ""),
+        oidc_org_slug=os.getenv(
+            "NEXUS_OIDC_ORG_SLUG", Settings.model_fields["oidc_org_slug"].default
+        ),
+        web_login_redirect_uris=_env_origins(
+            "NEXUS_WEB_LOGIN_REDIRECT_URIS",
+            Settings.model_fields["web_login_redirect_uris"].default,
         ),
         cors_allow_origins=_env_origins(
             "NEXUS_CORS_ORIGINS", Settings.model_fields["cors_allow_origins"].default

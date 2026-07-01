@@ -279,6 +279,24 @@ Table auth_cli_authorizations {
   Note: 'One-time CLI browser login authorization. Store only code hashes. org_id/user_id are set after Google SSO approval.'
 }
 
+Table auth_web_logins {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  org_id uuid [not null]
+  user_id uuid [not null]
+  session_id uuid [not null]
+  login_code_hash text [not null, unique]
+  expires_at timestamptz [not null]
+  consumed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    login_code_hash [unique, name: 'auth_web_logins_login_code_hash_unique']
+    (org_id, session_id) [name: 'auth_web_logins_session_idx']
+  }
+
+  Note: 'One-time web OIDC login handoff. The callback creates the session and a login code; the SPA exchanges the code hash for tokens exactly once. Store only the code hash.'
+}
+
 Table auth_refresh_tokens {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   org_id uuid [not null]

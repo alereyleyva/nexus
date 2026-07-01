@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import urllib.parse
 from datetime import timedelta
 from typing import Literal
 from uuid import UUID
@@ -23,8 +24,10 @@ from app.modules.auth.models import (
     AuthClientType,
     AuthRefreshToken,
     AuthSession,
+    AuthWebLogin,
     CliAuthorizationStatus,
 )
+from app.modules.auth.oidc import OidcError, OidcProvider, build_google_provider
 from app.modules.auth.repository import AuthRepository
 from app.modules.auth.schemas import (
     CliAuthorizationDetailsResponse,
@@ -36,14 +39,23 @@ from app.modules.identity.models import UserStatus
 from app.modules.identity.repository import IdentityRepository
 from app.modules.memory_entries.models import VisibilityScope
 
+_OIDC_STATE_AUDIENCE = "nexus-oidc-state"
+
 
 class AuthService:
-    def __init__(self, db: Session, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        db: Session,
+        settings: Settings | None = None,
+        *,
+        oidc_provider: OidcProvider | None = None,
+    ) -> None:
         self._db = db
         self._settings = settings if settings is not None else get_settings()
         self._repository = AuthRepository(db)
         self._identity_repository = IdentityRepository(db)
         self._audit_service = AuditService(db)
+        self._oidc_provider = oidc_provider
 
     def providers(self) -> list[dict[str, str]]:
         return [{"id": "google", "label": "Google", "type": "oidc"}]
@@ -228,6 +240,32 @@ class AuthService:
         capabilities: list[str],
         max_visibility_scope: VisibilityScope | None,
     ) -> TokenResponse:
+        session = self._start_session(
+            org_id=org_id,
+            user_id=user_id,
+            provider=provider,
+            provider_subject=provider_subject,
+            client_type=client_type,
+            client_name=client_name,
+            capabilities=capabilities,
+            max_visibility_scope=max_visibility_scope,
+        )
+        token_response = self._issue_token_pair(session=session, parent_token_id=None)
+        self._db.commit()
+        return token_response
+
+    def _start_session(
+        self,
+        *,
+        org_id: UUID,
+        user_id: UUID,
+        provider: str,
+        provider_subject: str,
+        client_type: AuthClientType,
+        client_name: str | None,
+        capabilities: list[str],
+        max_visibility_scope: VisibilityScope | None,
+    ) -> AuthSession:
         user = self._identity_repository.get_user_by_id_for_org(org_id=org_id, user_id=user_id)
         membership = self._identity_repository.get_membership(org_id=org_id, user_id=user_id)
         if user is None or membership is None or user.status != UserStatus.active:
@@ -247,7 +285,6 @@ class AuthService:
         )
         self._repository.add_session(session)
         self._db.flush()
-        token_response = self._issue_token_pair(session=session, parent_token_id=None)
         actor = ActorContext(
             org_id=org_id,
             user_id=user_id,
@@ -265,8 +302,133 @@ class AuthService:
             decision=AuditDecision.allow,
             metadata={"client_type": client_type.value, "client_name": client_name or ""},
         )
+        return session
+
+    def build_oidc_authorization_url(self, *, provider: str, redirect_uri: str) -> str:
+        self._require_known_provider(provider)
+        if redirect_uri not in self._settings.web_login_redirect_uris:
+            raise BadRequestError("The redirect_uri is not allowed.")
+        provider_client = self._require_oidc_provider()
+        nonce = generate_token("nonce", bytes_count=16)
+        state = self._encode_oidc_state(redirect_uri=redirect_uri, nonce=nonce)
+        return provider_client.build_authorization_url(
+            redirect_uri=redirect_uri, state=state, nonce=nonce
+        )
+
+    def complete_oidc_login(self, *, provider: str, code: str, state: str) -> str:
+        self._require_known_provider(provider)
+        redirect_uri, nonce = self._decode_oidc_state(state)
+        provider_client = self._require_oidc_provider()
+        try:
+            identity = provider_client.exchange_code(
+                code=code, redirect_uri=redirect_uri, nonce=nonce
+            )
+        except OidcError:
+            return self._login_redirect(redirect_uri, error="oidc_exchange_failed")
+        if not identity.email_verified:
+            return self._login_redirect(redirect_uri, error="email_not_verified")
+        organization = self._identity_repository.get_organization_by_slug(
+            self._settings.oidc_org_slug
+        )
+        if organization is None:
+            return self._login_redirect(redirect_uri, error="organization_not_found")
+        user = self._identity_repository.get_user_by_email_for_org(
+            org_id=organization.id, email=identity.email
+        )
+        if user is None or user.status != UserStatus.active:
+            return self._login_redirect(redirect_uri, error="user_not_authorized")
+        session = self._start_session(
+            org_id=organization.id,
+            user_id=user.id,
+            provider="google",
+            provider_subject=identity.subject,
+            client_type=AuthClientType.web,
+            client_name="nexus-web",
+            capabilities=[],
+            max_visibility_scope=None,
+        )
+        login_code = generate_token("nxs_wl", bytes_count=32)
+        self._repository.add_web_login(
+            AuthWebLogin(
+                org_id=organization.id,
+                user_id=user.id,
+                session_id=session.id,
+                login_code_hash=hash_secret(login_code, self._settings.token_secret),
+                expires_at=utc_now() + timedelta(seconds=self._settings.web_login_seconds),
+            )
+        )
         self._db.commit()
-        return token_response
+        return self._login_redirect(redirect_uri, login_code=login_code)
+
+    def exchange_web_login(self, *, login_code: str) -> TokenResponse:
+        web_login = self._repository.get_web_login_by_hash(
+            hash_secret(login_code, self._settings.token_secret)
+        )
+        if (
+            web_login is None
+            or web_login.consumed_at is not None
+            or as_utc(web_login.expires_at) <= utc_now()
+        ):
+            raise UnauthenticatedError("Invalid login code.")
+        session = self._repository.get_session(
+            org_id=web_login.org_id, session_id=web_login.session_id
+        )
+        if (
+            session is None
+            or session.revoked_at is not None
+            or as_utc(session.expires_at) <= utc_now()
+        ):
+            raise UnauthenticatedError("Invalid session.")
+        web_login.consumed_at = utc_now()
+        response = self._issue_token_pair(session=session, parent_token_id=None)
+        self._db.commit()
+        return response
+
+    def _require_known_provider(self, provider: str) -> None:
+        if provider != "google":
+            raise NotFoundError("auth provider")
+
+    def _require_oidc_provider(self) -> OidcProvider:
+        if self._oidc_provider is not None:
+            return self._oidc_provider
+        if not self._settings.oidc_client_id or not self._settings.oidc_client_secret:
+            raise NotFoundError("auth provider")
+        return build_google_provider(
+            client_id=self._settings.oidc_client_id,
+            client_secret=self._settings.oidc_client_secret,
+        )
+
+    def _encode_oidc_state(self, *, redirect_uri: str, nonce: str) -> str:
+        now = utc_now()
+        claims: JsonObject = {
+            "iss": self._settings.token_issuer,
+            "aud": _OIDC_STATE_AUDIENCE,
+            "redirect_uri": redirect_uri,
+            "nonce": nonce,
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(seconds=self._settings.oidc_state_seconds)).timestamp()),
+        }
+        return encode_access_token(claims, self._settings.token_secret)
+
+    def _decode_oidc_state(self, state: str) -> tuple[str, str]:
+        claims = decode_access_token(state, self._settings.token_secret)
+        if claims is None or claims.get("aud") != _OIDC_STATE_AUDIENCE:
+            raise BadRequestError("Invalid OIDC state.")
+        redirect_uri = claims.get("redirect_uri")
+        nonce = claims.get("nonce")
+        if (
+            not isinstance(redirect_uri, str)
+            or redirect_uri not in self._settings.web_login_redirect_uris
+            or not isinstance(nonce, str)
+        ):
+            raise BadRequestError("Invalid OIDC state.")
+        return redirect_uri, nonce
+
+    def _login_redirect(
+        self, redirect_uri: str, *, login_code: str | None = None, error: str | None = None
+    ) -> str:
+        parameter = {"login_code": login_code} if login_code is not None else {"error": error}
+        return f"{redirect_uri}?{urllib.parse.urlencode(parameter)}"
 
     def validate_access_token(self, *, token: str, request_id: str) -> ActorContext:
         claims = decode_access_token(token, self._settings.token_secret)

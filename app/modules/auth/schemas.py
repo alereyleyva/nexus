@@ -97,6 +97,12 @@ class DevLoginRequest(BaseModel):
     email: str = Field(min_length=3)
 
 
+class WebSessionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    login_code: str = Field(min_length=1)
+
+
 class ActorContextResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

@@ -177,6 +177,7 @@ Initial sort orders:
 | GET | `/v1/auth/oidc/{provider}/callback` | Complete OIDC login. | Provider callback |
 | POST | `/v1/auth/cli/token` | Exchange authorized CLI login for Nexus credentials. | None with one-time device code |
 | POST | `/v1/auth/web/dev-login` | Issue a web session for a seeded user by email. Development only. | None; disabled unless `NEXUS_DEV_LOGIN=true` |
+| POST | `/v1/auth/web/session` | Exchange a one-time OIDC `login_code` for Nexus credentials. | None with one-time login code |
 | POST | `/v1/auth/session/refresh` | Rotate refresh token and issue a new access token. | Refresh token |
 | POST | `/v1/auth/session/revoke` | Revoke current session. | Access or refresh token |
 | GET | `/v1/auth/me` | Return current actor and session context. | `auth:read` if restricted |
@@ -404,6 +405,55 @@ State machine:
 | `pending` | Expiry time passes | `expired` | Token exchange returns `400 BAD_REQUEST` with safe detail. |
 | `approved` | CLI exchanges device code | `exchanged` | `200` with Nexus credentials. |
 | `exchanged` | CLI reuses device code | `exchanged` | `409 CONFLICT`. |
+
+### OIDC Web Login
+
+Production web login uses the Google OIDC authorization-code flow. The web client never
+sees the provider secret and never receives tokens in a URL.
+
+```http
+GET /v1/auth/oidc/{provider}/authorize?redirect_uri=<web_callback>
+```
+
+| Step | Behavior |
+| --- | --- |
+| Provider | Only `google` is valid in v1; other providers return `404 NOT_FOUND`. |
+| Redirect allowlist | `redirect_uri` must match `NEXUS_WEB_LOGIN_REDIRECT_URIS`; otherwise `400 BAD_REQUEST`. |
+| State | The API mints a signed, short-lived `state` carrying the `redirect_uri` and a `nonce`. It is not stored server-side. |
+| Response | `302` redirect to the provider authorization URL with `scope=openid email`, the `state`, and the `nonce`. |
+
+```http
+GET /v1/auth/oidc/{provider}/callback?code=<code>&state=<state>
+```
+
+| Step | Behavior |
+| --- | --- |
+| State check | Reject a missing, tampered, or expired `state` with `400 BAD_REQUEST`. |
+| Token exchange | The API exchanges `code` with the provider over TLS and reads the `id_token` returned directly by the token endpoint. |
+| Identity claims | Require `iss`, `aud = client_id`, unexpired `exp`, matching `nonce`, and `email_verified = true`. |
+| User resolution | Resolve an active user by verified email inside `NEXUS_OIDC_ORG_SLUG`. Unknown or disabled users are denied. Nexus does not auto-provision users in v1. |
+| Handoff | Create the web session, mint a one-time `login_code`, and `302` redirect to `redirect_uri?login_code=<code>`. |
+| Failure | On denial, redirect to `redirect_uri?error=<code>` with a safe error code and no tokens. |
+
+Because the `id_token` is retrieved directly from the provider token endpoint over TLS,
+Nexus validates the standard claims (`iss`, `aud`, `exp`, `nonce`, `email_verified`)
+rather than re-verifying the provider signature (OpenID Connect Core 3.1.3.7).
+
+```http
+POST /v1/auth/web/session
+```
+
+Request:
+
+```json
+{ "login_code": "nxs_wl_..." }
+```
+
+| Rule | Requirement |
+| --- | --- |
+| One-time | The `login_code` is single-use. Store only its hash. A reused or unknown code returns `401 UNAUTHENTICATED`. |
+| Expiry | Expired codes return `401 UNAUTHENTICATED`. |
+| Result | Returns the standard `TokenResponse` for the session created during the callback. |
 
 ### Exchange CLI Login
 

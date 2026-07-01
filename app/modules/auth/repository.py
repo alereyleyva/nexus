@@ -5,7 +5,12 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.modules.auth.models import AuthCliAuthorization, AuthRefreshToken, AuthSession
+from app.modules.auth.models import (
+    AuthCliAuthorization,
+    AuthRefreshToken,
+    AuthSession,
+    AuthWebLogin,
+)
 
 
 class AuthRepository:
@@ -41,6 +46,15 @@ class AuthRepository:
             .scalars()
             .all()
         )
+
+    def add_web_login(self, web_login: AuthWebLogin) -> AuthWebLogin:
+        self._db.add(web_login)
+        return web_login
+
+    def get_web_login_by_hash(self, login_code_hash: str) -> AuthWebLogin | None:
+        return self._db.execute(
+            select(AuthWebLogin).where(AuthWebLogin.login_code_hash == login_code_hash)
+        ).scalar_one_or_none()
 
     def get_refresh_token_by_hash(self, token_hash: str) -> AuthRefreshToken | None:
         return self._db.execute(
