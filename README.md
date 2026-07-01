@@ -176,9 +176,9 @@ definition or env vars. `NEXUS_DEV_LOGIN` must stay unset.
 
 ```sh
 cd infra
-npm install
-npx cdk diff && npx cdk deploy --all     # provision/update both stacks
-aws ecs run-task ...                      # one-shot Fargate migrate (alembic upgrade head)
+bun install
+bunx cdk diff && bunx cdk deploy --all    # provision/update both stacks
+aws ecs run-task ...                       # one-shot Fargate migrate (alembic upgrade head)
 ```
 
 `docker-compose.prod.yml` is kept only as a **local, prod-like integration

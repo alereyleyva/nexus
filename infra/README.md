@@ -12,8 +12,8 @@ failure domains, no cross-stack references. Deploy or roll back either alone.
 
 ## Prerequisites
 
-- Node.js 20+ and `npm`, Docker (for building the API image asset), and AWS
-  credentials for the target account.
+- [Bun](https://bun.sh) (the app runs TypeScript directly — no `ts-node`), Docker
+  (for building the API image asset), and AWS credentials for the target account.
 - A **pre-existing RDS PostgreSQL** instance with a **`nexus` database + role**
   already created (see `standards/deployment.md`), and its VPC + security-group ids.
 - The runtime secrets stored as **SSM `SecureString`** parameters (see below).
@@ -44,17 +44,17 @@ runtime (see `app/config.py`).
 ## Commands
 
 ```sh
-npm install
-npm run build          # tsc type-check
-npx cdk diff           # review changes (needs AWS creds; the API stack looks up the VPC)
-npx cdk deploy --all   # deploy both stacks
+bun install
+bun run build          # tsc type-check
+bunx cdk diff          # review changes (needs AWS creds; the API stack looks up the VPC)
+bunx cdk deploy --all  # deploy both stacks
 
 # Deploy one at a time:
-npx cdk deploy Nexus-Api-prod
-npx cdk deploy Nexus-Web-prod
+bunx cdk deploy Nexus-Api-prod
+bunx cdk deploy Nexus-Web-prod
 ```
 
-Bootstrap the account/region once if you never have: `npx cdk bootstrap
+Bootstrap the account/region once if you never have: `bunx cdk bootstrap
 aws://<account>/<region>`.
 
 ## Deploy order & migrations
@@ -75,7 +75,7 @@ aws://<account>/<region>`.
 
    ```sh
    (cd ../web && VITE_API_URL=https://api.nexus.example.com bun run build)
-   npx cdk deploy Nexus-Web-prod
+   bunx cdk deploy Nexus-Web-prod
    ```
 
    The web stack skips the bucket deployment (with a warning) if `web/dist` is

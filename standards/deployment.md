@@ -198,10 +198,10 @@ references:
 
 ```sh
 cd infra
-npm install
-npm run build                        # tsc type-check
-npx cdk diff                         # review the change set
-npx cdk deploy --all                 # or deploy one stack at a time
+bun install
+bun run build                        # tsc type-check
+bunx cdk diff                        # review the change set
+bunx cdk deploy --all                # or deploy one stack at a time
 ```
 
 Per-environment values live in `infra/cdk.json` under `context.environments.<env>`;
@@ -260,7 +260,7 @@ PostgreSQL is the single source of truth; back it up accordingly.
 2. Ensure the SSM `SecureString` parameters exist and the Lambda role has
    `ssm:GetParameter` + `kms:Decrypt`. **No secret values in env vars or CDK.**
 3. Confirm `NEXUS_DEV_LOGIN` is unset.
-4. `npx cdk deploy --all` from `infra/` (review `npx cdk diff` first).
+4. `bunx cdk deploy --all` from `infra/` (review `bunx cdk diff` first).
 5. Run the migrate Fargate task (`alembic upgrade head`) as a discrete step.
 6. Shift the API alias to the new version; verify `/health/ready` returns 200.
 7. Invalidate the CloudFront cache if the SPA changed.

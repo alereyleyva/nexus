@@ -439,9 +439,9 @@ Production runs **serverless on AWS, provisioned with the AWS CDK (TypeScript)**
 
 ```sh
 cd infra
-npm install
-npx cdk diff && npx cdk deploy --all     # provision/update both stacks
-aws ecs run-task ...                      # one-shot Fargate migrate (see infra/README.md)
+bun install
+bunx cdk diff && bunx cdk deploy --all    # provision/update both stacks
+aws ecs run-task ...                       # one-shot Fargate migrate (see infra/README.md)
 ```
 
 Key operational rules:

@@ -4,7 +4,7 @@
   "private": true,
   "description": "AWS CDK (TypeScript) infrastructure for Nexus: API and web stacks.",
   "bin": {
-    "nexus": "bin/nexus.js"
+    "nexus": "bin/nexus.ts"
   },
   "scripts": {
     "build": "tsc",
@@ -16,7 +16,6 @@
   "devDependencies": {
     "@types/node": "^22.9.0",
     "aws-cdk": "^2.170.0",
-    "ts-node": "^10.9.2",
     "typescript": "~5.6.3"
   },
   "dependencies": {
