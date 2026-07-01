@@ -20,6 +20,7 @@ class Settings(BaseModel):
     session_seconds: int = 43_200
     cli_authorization_seconds: int = 600
     public_base_url: str = "http://localhost:8000"
+    web_base_url: str = "http://localhost:5173"
     dev_login_enabled: bool = False
     dev_login_org_slug: str = "aircury"
     # Frontend and API deploy separately; the web client calls the API cross-origin.
@@ -48,6 +49,7 @@ def get_settings() -> Settings:
         public_base_url=os.getenv(
             "NEXUS_PUBLIC_BASE_URL", Settings.model_fields["public_base_url"].default
         ),
+        web_base_url=os.getenv("NEXUS_WEB_BASE_URL", Settings.model_fields["web_base_url"].default),
         dev_login_enabled=_env_flag("NEXUS_DEV_LOGIN", False),
         dev_login_org_slug=os.getenv(
             "NEXUS_DEV_LOGIN_ORG_SLUG", Settings.model_fields["dev_login_org_slug"].default

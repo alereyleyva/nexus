@@ -170,7 +170,9 @@ Initial sort orders:
 | GET | `/health/ready` | Dependency readiness check. | None |
 | GET | `/v1/auth/providers` | List configured login providers. | None |
 | POST | `/v1/auth/cli/authorizations` | Start CLI browser login. | None |
-| GET | `/v1/auth/cli/authorizations/{user_code}` | Browser verification page for CLI login. | None, then OIDC |
+| GET | `/v1/auth/cli/authorizations/{user_code}` | Read the pending CLI login request the web verification page renders. | None |
+| POST | `/v1/auth/cli/authorizations/{user_code}/approve` | Approve a pending CLI login as the signed-in user. | Authenticated web session |
+| POST | `/v1/auth/cli/authorizations/{user_code}/deny` | Deny a pending CLI login. | Authenticated web session |
 | GET | `/v1/auth/oidc/{provider}/authorize` | Start OIDC login for UI or CLI verification. | None |
 | GET | `/v1/auth/oidc/{provider}/callback` | Complete OIDC login. | Provider callback |
 | POST | `/v1/auth/cli/token` | Exchange authorized CLI login for Nexus credentials. | None with one-time device code |
@@ -338,7 +340,7 @@ Response:
 {
   "device_code": "dev_01J...",
   "user_code": "ABCD-EFGH",
-  "verification_uri": "https://nexus.example.com/v1/auth/cli/authorizations/ABCD-EFGH",
+  "verification_uri": "https://app.nexus.example.com/cli/approve?code=ABCD-EFGH",
   "expires_in": 600,
   "interval": 5
 }
@@ -348,10 +350,48 @@ Behavior:
 
 | Rule | Requirement |
 | --- | --- |
-| Browser SSO | CLI opens `verification_uri`; user completes Google/OIDC login in browser. |
-| Pending login | `device_code` is one-time and expires quickly. Store only a hash. |
+| Browser SSO | CLI opens `verification_uri` on the web client; the user signs in with Google OIDC there if not already signed in. |
+| Verification page | The web client resolves the pending request through `GET /v1/auth/cli/authorizations/{user_code}` and shows what the CLI requested. |
+| Approval | The signed-in user approves through `POST /v1/auth/cli/authorizations/{user_code}/approve`, which binds the pending login to that user. |
+| Pending login | `device_code` is one-time and expires quickly. Store only a hash. Never expose device or user code hashes. |
 | Capabilities | Requested capabilities become session restrictions after approval. They never expand user permissions. |
 | Max visibility | Requested `max_visibility_scope` caps create/visibility expansion for this session. |
+
+The `verification_uri` points at the web client (ADR-0012), not the API. Its base is
+`NEXUS_WEB_BASE_URL`. The API only exposes the JSON read and approve/deny endpoints;
+rendering the verification page is the web client's responsibility.
+
+### Read And Approve CLI Login
+
+```http
+GET /v1/auth/cli/authorizations/{user_code}
+```
+
+Public read used by the web verification page. Returns a safe view of the pending
+request and never returns tokens, device codes, or hashes:
+
+```json
+{
+  "client_name": "nexus-cli",
+  "requested_capabilities": ["memory:create", "memory:read"],
+  "max_visibility_scope": "project",
+  "status": "pending",
+  "expires_in": 480
+}
+```
+
+Unknown or expired user codes return `404 NOT_FOUND` to avoid code probing.
+
+```http
+POST /v1/auth/cli/authorizations/{user_code}/approve
+POST /v1/auth/cli/authorizations/{user_code}/deny
+```
+
+Both require an authenticated web session (`Authorization: Bearer`). Approve binds the
+pending login to the actor's `org_id` and `user_id` and moves it to `approved`; deny
+moves it to `denied`. Both emit an audit event. A pending login that is expired or not
+`pending` returns `409 CONFLICT` (or `400 BAD_REQUEST` when expired), matching the CLI
+state machine. Response body is `{"status": "approved"}` or `{"status": "denied"}`.
 
 State machine:
 

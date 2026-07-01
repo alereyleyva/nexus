@@ -26,7 +26,11 @@ from app.modules.auth.models import (
     CliAuthorizationStatus,
 )
 from app.modules.auth.repository import AuthRepository
-from app.modules.auth.schemas import StartCliAuthorizationResponse, TokenResponse
+from app.modules.auth.schemas import (
+    CliAuthorizationDetailsResponse,
+    StartCliAuthorizationResponse,
+    TokenResponse,
+)
 from app.modules.auth.types import ActorContext
 from app.modules.identity.models import UserStatus
 from app.modules.identity.repository import IdentityRepository
@@ -68,13 +72,73 @@ class AuthService:
         return StartCliAuthorizationResponse(
             device_code=device_code,
             user_code=user_code,
-            verification_uri=f"{self._settings.public_base_url}/v1/auth/cli/authorizations/{user_code}",
+            verification_uri=f"{self._settings.web_base_url}/cli/approve?code={user_code}",
             expires_in=self._settings.cli_authorization_seconds,
             interval=5,
         )
 
+    def get_pending_cli_authorization(self, *, user_code: str) -> CliAuthorizationDetailsResponse:
+        authorization = self._load_pending_cli_authorization_for_read(user_code=user_code)
+        remaining = int((as_utc(authorization.expires_at) - utc_now()).total_seconds())
+        return CliAuthorizationDetailsResponse(
+            client_name=authorization.client_name,
+            requested_capabilities=authorization.requested_capabilities,
+            max_visibility_scope=authorization.max_visibility_scope,
+            status=authorization.status.value,
+            expires_in=max(remaining, 0),
+        )
+
     def approve_cli_authorization_for_user(
-        self, *, user_code: str, org_id: UUID, user_id: UUID
+        self, *, user_code: str, actor: ActorContext
+    ) -> AuthCliAuthorization:
+        authorization = self._load_pending_cli_authorization_for_decision(user_code=user_code)
+        authorization.org_id = actor.org_id
+        authorization.user_id = actor.user_id
+        authorization.status = CliAuthorizationStatus.approved
+        authorization.approved_at = utc_now()
+        self._audit_service.record_event(
+            actor=actor,
+            action="auth.cli_authorization.approved",
+            resource_type="auth_cli_authorization",
+            resource_id=authorization.id,
+            decision=AuditDecision.allow,
+            metadata={"client_name": authorization.client_name},
+        )
+        self._db.commit()
+        return authorization
+
+    def deny_cli_authorization_for_user(
+        self, *, user_code: str, actor: ActorContext
+    ) -> AuthCliAuthorization:
+        authorization = self._load_pending_cli_authorization_for_decision(user_code=user_code)
+        authorization.status = CliAuthorizationStatus.denied
+        self._audit_service.record_event(
+            actor=actor,
+            action="auth.cli_authorization.denied",
+            resource_type="auth_cli_authorization",
+            resource_id=authorization.id,
+            decision=AuditDecision.deny,
+            reason="cli_authorization_denied",
+            metadata={"client_name": authorization.client_name},
+        )
+        self._db.commit()
+        return authorization
+
+    def _load_pending_cli_authorization_for_read(self, *, user_code: str) -> AuthCliAuthorization:
+        authorization = self._repository.get_cli_authorization_by_user_hash(
+            hash_secret(user_code, self._settings.token_secret)
+        )
+        if authorization is None:
+            raise NotFoundError("CLI authorization")
+        if as_utc(authorization.expires_at) <= utc_now():
+            if authorization.status == CliAuthorizationStatus.pending:
+                authorization.status = CliAuthorizationStatus.expired
+                self._db.commit()
+            raise NotFoundError("CLI authorization")
+        return authorization
+
+    def _load_pending_cli_authorization_for_decision(
+        self, *, user_code: str
     ) -> AuthCliAuthorization:
         authorization = self._repository.get_cli_authorization_by_user_hash(
             hash_secret(user_code, self._settings.token_secret)
@@ -86,12 +150,7 @@ class AuthService:
             self._db.commit()
             raise BadRequestError("The CLI authorization expired.")
         if authorization.status != CliAuthorizationStatus.pending:
-            raise ConflictError("The CLI authorization cannot be approved in its current state.")
-        authorization.org_id = org_id
-        authorization.user_id = user_id
-        authorization.status = CliAuthorizationStatus.approved
-        authorization.approved_at = utc_now()
-        self._db.commit()
+            raise ConflictError("The CLI authorization cannot be updated in its current state.")
         return authorization
 
     def exchange_cli_token(

@@ -23,6 +23,21 @@ Feature: Authentication and short-lived user sessions
     And the CLI receives a refresh token
     And an audit event "auth.session.created" is emitted
 
+  Scenario: Signed-in user approves a pending CLI login
+    Given "pablo" runs "nexus login"
+    And "pablo" is signed in on the web client
+    When "pablo" approves the pending CLI login for its user code
+    Then the pending CLI login is bound to "pablo" in organization "aircury"
+    And the pending CLI login status becomes "approved"
+    And the CLI can exchange its device code for Nexus credentials
+
+  Scenario: Signed-in user denies a pending CLI login
+    Given "pablo" runs "nexus login"
+    And "pablo" is signed in on the web client
+    When "pablo" denies the pending CLI login for its user code
+    Then the pending CLI login status becomes "denied"
+    And the CLI device code exchange is rejected
+
   Scenario: CLI token polling waits for browser approval
     Given "pablo" runs "nexus login"
     And the browser verification has not completed

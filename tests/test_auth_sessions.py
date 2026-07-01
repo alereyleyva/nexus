@@ -105,7 +105,8 @@ def test_cli_authorization_polls_then_exchanges_once(db: Session, seed: SeedData
     pending = service.exchange_cli_token(device_code=started.device_code)
     assert pending == "authorization_pending"
     service.approve_cli_authorization_for_user(
-        user_code=started.user_code, org_id=seed.org.id, user_id=seed.pablo.id
+        user_code=started.user_code,
+        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
     )
     exchanged = service.exchange_cli_token(device_code=started.device_code)
     assert exchanged != "authorization_pending"

@@ -41,6 +41,22 @@ class StartCliAuthorizationResponse(BaseModel):
     interval: int
 
 
+class CliAuthorizationDetailsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    client_name: str
+    requested_capabilities: list[str]
+    max_visibility_scope: VisibilityScope | None
+    status: str
+    expires_in: int
+
+
+class CliApprovalResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: str
+
+
 class CliTokenRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

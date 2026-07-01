@@ -12,6 +12,8 @@ from app.modules.auth.schemas import (
     ActorContextResponse,
     AuthProviderResponse,
     AuthProvidersResponse,
+    CliApprovalResponse,
+    CliAuthorizationDetailsResponse,
     CliPendingResponse,
     CliTokenRequest,
     DevLoginRequest,
@@ -50,6 +52,43 @@ def start_cli_authorization(
         requested_capabilities=request.requested_capabilities,
         max_visibility_scope=request.max_visibility_scope,
     )
+
+
+@router.get(
+    "/cli/authorizations/{user_code}",
+    response_model=CliAuthorizationDetailsResponse,
+)
+def read_cli_authorization(
+    user_code: str,
+    db: Session = Depends(get_db_session),
+) -> CliAuthorizationDetailsResponse:
+    return AuthService(db).get_pending_cli_authorization(user_code=user_code)
+
+
+@router.post(
+    "/cli/authorizations/{user_code}/approve",
+    response_model=CliApprovalResponse,
+)
+def approve_cli_authorization(
+    user_code: str,
+    actor: ActorContext = Depends(get_actor_context),
+    db: Session = Depends(get_db_session),
+) -> CliApprovalResponse:
+    AuthService(db).approve_cli_authorization_for_user(user_code=user_code, actor=actor)
+    return CliApprovalResponse(status="approved")
+
+
+@router.post(
+    "/cli/authorizations/{user_code}/deny",
+    response_model=CliApprovalResponse,
+)
+def deny_cli_authorization(
+    user_code: str,
+    actor: ActorContext = Depends(get_actor_context),
+    db: Session = Depends(get_db_session),
+) -> CliApprovalResponse:
+    AuthService(db).deny_cli_authorization_for_user(user_code=user_code, actor=actor)
+    return CliApprovalResponse(status="denied")
 
 
 @router.post("/cli/token", response_model=TokenResponse | CliPendingResponse)
