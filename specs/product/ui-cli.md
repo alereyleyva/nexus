@@ -130,6 +130,39 @@ Result groups:
 | Include source context | Store flexible source metadata. |
 | Respect review | Do not assume shared memory is active. |
 | Render locally | CLI may render JSON/context packs as Markdown locally. |
+| Configure per user | Persist user configuration (API URL and command defaults) via `nexus config`. |
+
+## CLI Configuration
+
+The CLI keeps user configuration in `config.json` next to the credentials file
+(`${XDG_CONFIG_HOME:-~/.config}/nexus/config.json`, overridable with
+`NEXUS_CONFIG_FILE`). It holds non-secret user preferences only; credentials are never
+stored here.
+
+Managed keys:
+
+| Key | Purpose |
+| --- | --- |
+| `api_url` | API base URL used by `nexus login` and as the default for all commands. |
+| `source_tool` | Default `source_tool` for `nexus memory add`. |
+| `default_project` | Default project key for `memory add`, `search`, and `context-pack`. |
+
+Resolution precedence for any configurable value is:
+
+```text
+explicit CLI flag  >  environment variable  >  config.json  >  built-in default
+```
+
+Only `api_url` has an environment override (`NEXUS_API_URL`). The `nexus config`
+command manages the file:
+
+| Command | Effect |
+| --- | --- |
+| `nexus config list` | Show the config file path and stored values. |
+| `nexus config get <key>` | Print one stored value. |
+| `nexus config set <key> <value>` | Set a known key; unknown keys are rejected. |
+| `nexus config unset <key>` | Remove a key. |
+| `nexus config path` | Print the config file path. |
 
 Example future command:
 

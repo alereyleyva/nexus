@@ -7,7 +7,14 @@ from typing import cast
 
 from nexus_cli.auth import LoginError, authenticate, login
 from nexus_cli.client import ApiClient, ApiError
-from nexus_cli.config import resolve_api_url
+from nexus_cli.config import (
+    KNOWN_KEYS,
+    config_path,
+    load_config,
+    resolve_api_url,
+    resolve_setting,
+    save_config,
+)
 from nexus_cli.credentials import (
     Credentials,
     clear_credentials,
@@ -47,11 +54,33 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="nexus", description="Nexus shared memory CLI.")
     subparsers = parser.add_subparsers(dest="command")
 
-    subparsers.add_parser("login", help="Sign in with browser SSO.").set_defaults(handler=_login)
+    login_parser = subparsers.add_parser("login", help="Sign in with browser SSO.")
+    login_parser.add_argument("--api-url", dest="api_url", help="Override the API base URL.")
+    login_parser.set_defaults(handler=_login)
     subparsers.add_parser("logout", help="Revoke and forget the local session.").set_defaults(
         handler=_logout
     )
     subparsers.add_parser("whoami", help="Show the signed-in user.").set_defaults(handler=_whoami)
+
+    config = subparsers.add_parser("config", help="Manage user configuration.")
+    config.set_defaults(handler=_config_list)
+    config_sub = config.add_subparsers(dest="config_command")
+    config_sub.add_parser("list", help="Show stored configuration.").set_defaults(
+        handler=_config_list
+    )
+    config_sub.add_parser("path", help="Print the config file path.").set_defaults(
+        handler=_config_path
+    )
+    config_get = config_sub.add_parser("get", help="Print one stored value.")
+    config_get.add_argument("key")
+    config_get.set_defaults(handler=_config_get)
+    config_set = config_sub.add_parser("set", help="Set a known configuration key.")
+    config_set.add_argument("key")
+    config_set.add_argument("value")
+    config_set.set_defaults(handler=_config_set)
+    config_unset = config_sub.add_parser("unset", help="Remove a configuration key.")
+    config_unset.add_argument("key")
+    config_unset.set_defaults(handler=_config_unset)
 
     memory = subparsers.add_parser("memory", help="Work with memory entries.")
     memory_sub = memory.add_subparsers(dest="memory_command")
@@ -64,7 +93,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add.add_argument("--project", help="Project key, e.g. CECW.")
     add.add_argument("--group-id", help="Group UUID for group visibility.")
     add.add_argument("--tag", action="append", default=[], dest="tags")
-    add.add_argument("--source-tool", default="nexus-cli")
+    add.add_argument("--source-tool", help="Defaults to config source_tool or 'nexus-cli'.")
     add.add_argument("--source-ref")
     add.set_defaults(handler=_memory_add)
 
@@ -87,8 +116,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _login(args: argparse.Namespace) -> int:
-    _ = args
-    api_url = resolve_api_url()
+    api_url = resolve_api_url(args.api_url)
     credentials = login(api_url)
     save_credentials(credentials)
     client, _refreshed = authenticate(credentials)
@@ -127,12 +155,14 @@ def _whoami(args: argparse.Namespace) -> int:
 def _memory_add(args: argparse.Namespace) -> int:
     client, _refreshed = _authenticated_client()
     body = sys.stdin.read() if args.body == "-" else args.body
+    source_tool = resolve_setting("source_tool", args.source_tool) or "nexus-cli"
+    project = args.project or resolve_setting("default_project")
     payload: dict[str, object] = {
         "type": args.type,
         "title": args.title,
         "body": body,
         "source_kind": "ai_cli",
-        "source_tool": args.source_tool,
+        "source_tool": source_tool,
         "tags": list(args.tags),
     }
     if args.rationale:
@@ -143,8 +173,8 @@ def _memory_add(args: argparse.Namespace) -> int:
         payload["visibility_scope"] = args.visibility
     if args.group_id:
         payload["visibility_group_id"] = args.group_id
-    if args.project:
-        payload["project_id"] = _resolve_project_id(client, args.project)
+    if project:
+        payload["project_id"] = _resolve_project_id(client, project)
     entry = client.create_memory(payload)
     status = _text(entry, "status")
     print(f"Created memory {_text(entry, 'id')} ({status}).")
@@ -161,8 +191,9 @@ def _search(args: argparse.Namespace) -> int:
         "tags": list(args.tags),
         "limit": args.limit,
     }
-    if args.project:
-        payload["project_id"] = _resolve_project_id(client, args.project)
+    project = args.project or resolve_setting("default_project")
+    if project:
+        payload["project_id"] = _resolve_project_id(client, project)
     response = client.search(payload)
     results = response.get("results")
     if not isinstance(results, list) or not results:
@@ -180,8 +211,9 @@ def _context_pack(args: argparse.Namespace) -> int:
     payload: dict[str, object] = {"task": args.task, "max_items": args.max_items}
     if args.query:
         payload["query"] = args.query
-    if args.project:
-        payload["project_id"] = _resolve_project_id(client, args.project)
+    project = args.project or resolve_setting("default_project")
+    if project:
+        payload["project_id"] = _resolve_project_id(client, project)
     pack = client.context_pack(payload)
     _render_context_pack(pack, task=args.task)
     return 0
@@ -206,6 +238,62 @@ def _render_context_pack(pack: Mapping[str, object], *, task: str) -> None:
         for warning in cast(list[object], warnings):
             if isinstance(warning, Mapping):
                 print(f"- {_text(cast(Mapping[str, object], warning), 'message')}")
+
+
+def _config_list(args: argparse.Namespace) -> int:
+    _ = args
+    config = load_config()
+    print(f"config: {config_path()}")
+    if not config:
+        print("(no values set)")
+        return 0
+    for key in KNOWN_KEYS:
+        if key in config:
+            print(f"{key} = {config[key]}")
+    return 0
+
+
+def _config_path(args: argparse.Namespace) -> int:
+    _ = args
+    print(str(config_path()))
+    return 0
+
+
+def _config_get(args: argparse.Namespace) -> int:
+    if not _is_known_key(args.key):
+        return 2
+    value = load_config().get(args.key)
+    if value is not None:
+        print(value)
+    return 0
+
+
+def _config_set(args: argparse.Namespace) -> int:
+    if not _is_known_key(args.key):
+        return 2
+    config = load_config()
+    config[args.key] = args.value
+    save_config(config)
+    print(f"{args.key} = {args.value}")
+    return 0
+
+
+def _config_unset(args: argparse.Namespace) -> int:
+    if not _is_known_key(args.key):
+        return 2
+    config = load_config()
+    if config.pop(args.key, None) is not None:
+        save_config(config)
+    return 0
+
+
+def _is_known_key(key: str) -> bool:
+    if key in KNOWN_KEYS:
+        return True
+    print(
+        f"error: unknown config key '{key}'. Known keys: {', '.join(KNOWN_KEYS)}", file=sys.stderr
+    )
+    return False
 
 
 def _authenticated_client() -> tuple[ApiClient, Credentials]:

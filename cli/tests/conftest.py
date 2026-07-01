@@ -50,3 +50,11 @@ def creds_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     path = tmp_path / "credentials.json"
     monkeypatch.setenv("NEXUS_CREDENTIALS_FILE", str(path))
     return path
+
+
+@pytest.fixture
+def config_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    path = tmp_path / "config.json"
+    monkeypatch.setenv("NEXUS_CONFIG_FILE", str(path))
+    monkeypatch.delenv("NEXUS_API_URL", raising=False)
+    return path

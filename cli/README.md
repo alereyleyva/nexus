@@ -59,10 +59,35 @@ was proposed for review and does not claim it is active.
 
 ## Configuration
 
+Persist user configuration with `nexus config` (stored in
+`${XDG_CONFIG_HOME:-~/.config}/nexus/config.json`, non-secret values only):
+
+```sh
+nexus config set api_url https://api.nexus.example.com   # used by `nexus login` and all commands
+nexus config set default_project CECW                    # default project for add/search/context-pack
+nexus config set source_tool codex                       # default source_tool for `memory add`
+nexus config list
+nexus config get api_url
+nexus config unset default_project
+```
+
+Point the CLI at production once and forget it: `nexus config set api_url <prod-url>`,
+then `nexus login`. The chosen URL is also stored in the credentials file, so day-to-day
+commands need no environment variables.
+
+Values resolve by precedence: **CLI flag > environment variable > `config.json` > default**.
+
+| Setting | Config key | Env override | Flag |
+| --- | --- | --- | --- |
+| API base URL | `api_url` | `NEXUS_API_URL` | `nexus login --api-url` |
+| Default project | `default_project` | — | `--project` |
+| Default source tool | `source_tool` | — | `--source-tool` |
+
 | Variable | Purpose |
 | --- | --- |
-| `NEXUS_API_URL` | API base URL (default `http://localhost:8000`). |
-| `NEXUS_CREDENTIALS_FILE` | Override the credentials file path. |
+| `NEXUS_API_URL` | Overrides `api_url` for `nexus login` (default `http://localhost:8000`). |
+| `NEXUS_CONFIG_FILE` | Override the config file path. |
+| `NEXUS_CREDENTIALS_FILE` | Override the credentials file path (useful for multiple environments). |
 
 ## Development
 
