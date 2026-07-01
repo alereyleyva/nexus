@@ -1,0 +1,100 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..900;1,14..32,400..600&display=swap");
+@import "tailwindcss";
+
+/* Design tokens mapped from DESIGN.md (Aircury visual identity). */
+@theme {
+  --color-primary: #0c4a6e;
+  --color-secondary: #006591;
+  --color-tertiary: #57bc90;
+  --color-accent: #f6e05e;
+
+  --color-teal: #7dbfbb;
+  --color-teal-soft: #91cac4;
+  --color-green-deep: #31a07f;
+  --color-motif: #90c9c5;
+
+  --color-background: #ebf5f6;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-surface-tint: #dbeded;
+  --color-surface-washed: #ecf5f5;
+
+  --color-text: #334155;
+  --color-text-muted: #61657c;
+  --color-text-subtle: #595959;
+
+  --color-on-primary: #ffffff;
+  --color-on-tertiary: #ffffff;
+  --color-on-secondary: #ffffff;
+  --color-on-accent: #4a5568;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-base: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-card: 16px;
+  --radius-pill: 20px;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body,
+  #app {
+    min-height: 100%;
+  }
+  body {
+    margin: 0;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--color-primary);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  a {
+    color: var(--color-secondary);
+  }
+}
+
+/* The single signature transition timing across the system (DESIGN.md). */
+@utility transition-signature {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-timing-function: ease-in-out;
+  transition-duration: 0.3s;
+}
+
+/* Ambient organic pebble motif behind coloured covers (low-contrast decoration). */
+@utility pebble {
+  position: absolute;
+  background-color: var(--color-motif);
+  border-radius: 140px 140px 24px 140px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
