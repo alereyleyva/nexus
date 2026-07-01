@@ -55,9 +55,9 @@ changes.
 ## Secrets: SSM Parameter Store, resolved at runtime
 
 **Hard rule (ADR-0013): secret values never appear in plaintext in a Lambda
-definition, in an environment variable, or in a CloudFormation template.** Only SSM
-parameter **names** are passed to the function; the application resolves the values
-at runtime.
+definition, in an environment variable, or in a CloudFormation template.** Only an
+SSM parameter **pointer** is passed to the function; the application resolves the
+value at runtime.
 
 Store these as SSM **`SecureString`** parameters (KMS-encrypted):
 
@@ -67,20 +67,24 @@ Store these as SSM **`SecureString`** parameters (KMS-encrypted):
 | `NEXUS_TOKEN_SECRET` | `/nexus/prod/token-secret` |
 | `NEXUS_OIDC_CLIENT_SECRET` | `/nexus/prod/oidc-client-secret` |
 
-CDK passes the parameter **names** as env vars with a `_PARAM` suffix and grants
-the Lambda execution role `ssm:GetParameter` (+ `kms:Decrypt` for the CMK):
+The convention is simple: **any env var whose value starts with `ssm:` is a
+pointer to an SSM parameter, resolved at runtime.** CDK sets the normal env var to
+`ssm:<parameter-name>` and grants the Lambda execution role `ssm:GetParameter`
+(+ `kms:Decrypt` for the CMK):
 
 ```
-NEXUS_TOKEN_SECRET_PARAM=/nexus/prod/token-secret
-DATABASE_URL_PARAM=/nexus/prod/database-url
-NEXUS_OIDC_CLIENT_SECRET_PARAM=/nexus/prod/oidc-client-secret
+NEXUS_TOKEN_SECRET=ssm:/nexus/prod/token-secret
+DATABASE_URL=ssm:/nexus/prod/database-url
+NEXUS_OIDC_CLIENT_SECRET=ssm:/nexus/prod/oidc-client-secret
 ```
 
-`app/config.py` resolves each secret at runtime: when a `*_PARAM` env var is
-present it fetches the value from SSM (`boto3`, `WithDecryption=True`) and caches
-it for the execution environment's lifetime (`get_settings()` is already
-`lru_cache`d). If the plain variable is set instead (local dev, `.env`), it is used
-directly. This keeps local development unchanged while production reads only names.
+`app/config.py` resolves each `ssm:` value at runtime: it fetches the named
+parameter from SSM (`boto3`, `WithDecryption=True`) and caches it for the execution
+environment's lifetime (`get_settings()` is `lru_cache`d; `boto3` is imported
+lazily, only when an `ssm:` value is present). Any env var set to a plain value
+(local dev, `.env`) is used directly. This keeps local development unchanged while
+production stores only pointers. The convention is uniform — non-secret vars may use
+`ssm:` too — but secrets are the reason it exists.
 
 Rotating `NEXUS_TOKEN_SECRET` invalidates outstanding access tokens, refresh
 tokens, login codes, and OIDC state — rotate the SSM parameter deliberately and

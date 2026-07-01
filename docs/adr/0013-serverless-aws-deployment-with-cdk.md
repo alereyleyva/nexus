@@ -41,13 +41,16 @@ Constraints that shape the decision:
    **database and least-privilege role** are provisioned inside that instance for
    Nexus. The API Lambda runs **inside the VPC** (private subnets) and is allowed
    to reach RDS on 5432 via security-group rules.
-4. **Secrets in SSM, resolved at runtime.** `DATABASE_URL`, `NEXUS_TOKEN_SECRET`,
-   and `NEXUS_OIDC_CLIENT_SECRET` are stored as **SSM `SecureString`** parameters.
-   CDK passes only their **parameter names** to the function as env vars (e.g.
-   `NEXUS_TOKEN_SECRET_PARAM=/nexus/prod/token-secret`) and grants the Lambda role
-   `ssm:GetParameter` + `kms:Decrypt`. `get_settings()` fetches and decrypts the
-   values on cold start and caches them for the execution environment's lifetime.
-   Non-secret config (public URLs, org slug, CORS origins) stays as plain env vars.
+4. **Secrets in SSM, resolved at runtime via an `ssm:` value convention.**
+   `DATABASE_URL`, `NEXUS_TOKEN_SECRET`, and `NEXUS_OIDC_CLIENT_SECRET` are stored as
+   **SSM `SecureString`** parameters. CDK sets the normal env var to a **pointer**
+   whose value starts with `ssm:`, e.g.
+   `NEXUS_TOKEN_SECRET=ssm:/nexus/prod/token-secret`, and grants the Lambda role
+   `ssm:GetParameter` + `kms:Decrypt`. At runtime, `app/config.py` detects any env
+   var value starting with `ssm:` and resolves (decrypts) the named parameter;
+   `get_settings()` does this once per cold start and caches it. The convention is
+   uniform — any env var may use an `ssm:` pointer — and non-secret config (public
+   URLs, org slug, CORS origins) simply stays as plain values.
 5. **Migrations as a discrete one-shot Lambda.** Alembic runs as a **separate
    Lambda built from the same image** with `CMD ["alembic","upgrade","head"]`,
    invoked once per deploy **before** shifting traffic — never at API cold start,
@@ -64,10 +67,11 @@ Constraints that shape the decision:
   compose` remains a **local development / integration** tool only; the reference
   `docker-compose.prod.yml` is demoted to a local prod-like harness, not the deploy
   path.
-- The app must gain a small **runtime SSM resolver** in `app/config.py`: when a
-  `*_PARAM` env var is present, resolve the value from SSM (`boto3`) instead of
-  reading the secret directly. Local dev keeps using plain env vars / `.env`, so
-  the change is additive and backward compatible.
+- The app gained a small **runtime SSM resolver** in `app/config.py`: when an env
+  var value starts with `ssm:`, the remainder is resolved from SSM (`boto3`,
+  `WithDecryption=True`) instead of used verbatim. Local dev keeps using plain env
+  vars / `.env`, so the change is additive and backward compatible. `boto3` is a
+  runtime dependency and is imported lazily (only when an `ssm:` value is present).
 - **Lambda-in-VPC networking**: outbound access is required for the Google OIDC
   token exchange, so the private subnets need a **NAT Gateway** (or equivalent
   egress); AWS API calls (SSM, ECR image pull, CloudWatch Logs) use VPC endpoints

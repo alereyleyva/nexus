@@ -466,16 +466,17 @@ provisioning, CDK stacks, scaling/connections, backup/restore, and TLS — is in
 
 ### Environment variables (API)
 
-**Secrets** — in production these live in **SSM Parameter Store (`SecureString`)**
-and the app resolves them at runtime; only the parameter **name** is passed to the
-Lambda (e.g. `NEXUS_TOKEN_SECRET_PARAM`). Locally, set the plain variable (or use
-`.env`).
+**Secrets** — any env var whose value starts with **`ssm:`** is treated as a
+pointer to an **SSM Parameter Store (`SecureString`)** parameter and resolved
+(decrypted) at runtime. In production set e.g.
+`NEXUS_TOKEN_SECRET=ssm:/nexus/prod/token-secret`; locally set the plain value (or
+use `.env`). The same variable name is used in both cases.
 
-| Secret | Local env var | Production (SSM param name via) | Purpose |
-| --- | --- | --- | --- |
-| Database URL | `DATABASE_URL` | `DATABASE_URL_PARAM` | SQLAlchemy/psycopg URL (contains the DB password). |
-| Token secret | `NEXUS_TOKEN_SECRET` | `NEXUS_TOKEN_SECRET_PARAM` | 24+ char secret signing tokens, hashes, and OIDC state. |
-| OIDC client secret | `NEXUS_OIDC_CLIENT_SECRET` | `NEXUS_OIDC_CLIENT_SECRET_PARAM` | Google OAuth client secret — **server-only**. |
+| Secret | Env var | Local value | Production value | Purpose |
+| --- | --- | --- | --- | --- |
+| Database URL | `DATABASE_URL` | plain URL | `ssm:/nexus/prod/database-url` | SQLAlchemy/psycopg URL (contains the DB password). |
+| Token secret | `NEXUS_TOKEN_SECRET` | plain value | `ssm:/nexus/prod/token-secret` | 24+ char secret signing tokens, hashes, and OIDC state. |
+| OIDC client secret | `NEXUS_OIDC_CLIENT_SECRET` | plain value | `ssm:/nexus/prod/oidc-client-secret` | Google OAuth client secret — **server-only**. |
 
 **Non-secret config** — plain env vars on the API Lambda:
 
