@@ -154,28 +154,32 @@ The product is functional when:
 
 ## Deployment
 
-Production deployment is documented in the runbook at
-[`standards/deployment.md`](standards/deployment.md): required env vars and
-secrets, Google OIDC provisioning, migrations as a deploy step, health/readiness
-endpoints, horizontal scaling, Postgres backup/restore, and TLS expectations.
+Production runs **serverless on AWS, provisioned with the AWS CDK** (ADR-0013).
+The full runbook is [`standards/deployment.md`](standards/deployment.md): SSM
+secrets read at runtime, consuming the existing RDS, Google OIDC provisioning,
+migrations as a discrete step, health smoke tests, scaling, backup/restore, and
+TLS/domains.
 
-The API and web SPA ship as separate images (ADR-0012):
+The API and web SPA deploy as separate artifacts (ADR-0012):
 
-| Artifact | Build context |
-| --- | --- |
-| API image | `Dockerfile` (root) — multi-stage uv build, non-root, uvicorn. |
-| Web image | `web/Dockerfile` — bun build served by nginx (needs `--build-arg VITE_API_URL`). |
+| Artifact | Hosting | Build context |
+| --- | --- | --- |
+| API | **Lambda** (container image + AWS Lambda Web Adapter) behind **API Gateway** | `Dockerfile` (root) — multi-stage uv build, non-root, uvicorn unchanged. |
+| Web SPA | **S3 + CloudFront** | `web/` via `bun run build` (needs `VITE_API_URL` at build time). |
+| Database | **Existing RDS PostgreSQL** — a new `nexus` database inside it | not provisioned here; referenced by CDK. |
 
-A reference stack is provided in `docker-compose.prod.yml` (postgres, a one-shot
-`migrate` service, and the `api`; `web` is optional). Secrets must come from a
-secret manager and `NEXUS_DEV_LOGIN` must stay unset in production.
+Secrets (`DATABASE_URL`, `NEXUS_TOKEN_SECRET`, `NEXUS_OIDC_CLIENT_SECRET`) live in
+**SSM Parameter Store (`SecureString`)** and are resolved at runtime — never
+plaintext in the Lambda definition or env vars. `NEXUS_DEV_LOGIN` must stay unset.
 
 ```sh
-# Provide secrets/URLs via the environment or an untracked .env, then:
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml run --rm migrate   # alembic upgrade head
-docker compose -f docker-compose.prod.yml up -d
+cd infra
+cdk diff && cdk deploy --all                                  # provision/update
+aws lambda invoke --function-name nexus-migrate /dev/stdout   # alembic upgrade head
 ```
+
+`docker-compose.prod.yml` is kept only as a **local, prod-like integration
+harness**; it is not the deploy path.
 
 ## Working From Specs
 

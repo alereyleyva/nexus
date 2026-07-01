@@ -425,42 +425,63 @@ Sign in on the web login page with a seeded email such as `pablo@aircury.com`
 (viewer). Dev-login only works when `NEXUS_DEV_LOGIN=true` and never runs in
 production, where **Google OIDC** is the login path.
 
-### Reference production stack
+### Production: serverless on AWS
 
-A reference `docker-compose.prod.yml` provides Postgres, a one-shot `migrate`
-service, and the API (web is optional):
+Production runs **serverless on AWS, provisioned with the AWS CDK** (ADR-0013):
+
+- **API** → AWS **Lambda** (the root `Dockerfile` as a container image + the AWS
+  Lambda Web Adapter, so `uvicorn` runs unchanged) behind an **API Gateway HTTP
+  API**.
+- **Web SPA** → static build on **S3**, served by **CloudFront**.
+- **Database** → a new `nexus` database inside a **pre-existing RDS PostgreSQL**
+  instance (CDK references it; it is not provisioned here).
 
 ```sh
-# Provide secrets/URLs via the environment or an untracked .env, then:
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml run --rm migrate   # alembic upgrade head
-docker compose -f docker-compose.prod.yml up -d
+cd infra
+cdk diff && cdk deploy --all                                  # provision/update
+aws lambda invoke --function-name nexus-migrate /dev/stdout   # alembic upgrade head
 ```
 
 Key operational rules:
 
-- The API image **does not** run migrations at startup — run `alembic upgrade
-  head` as a **discrete deploy step**, once per deploy, before rolling replicas.
-- Secrets (`NEXUS_TOKEN_SECRET`, `NEXUS_OIDC_CLIENT_SECRET`, DB password) must come
-  from a secret manager. The OIDC client secret is **server-only** — never ship it
-  to the CLI or the SPA.
+- The API image **does not** run migrations at startup — a one-shot **migrate
+  Lambda** runs `alembic upgrade head` as a **discrete step**, before traffic
+  shifts.
+- Secrets (`DATABASE_URL`, `NEXUS_TOKEN_SECRET`, `NEXUS_OIDC_CLIENT_SECRET`) live in
+  **SSM Parameter Store (`SecureString`)** and are **resolved at runtime** — never
+  plaintext in the Lambda definition or env vars. The OIDC client secret is
+  **server-only** — never ship it to the CLI or the SPA.
 - `NEXUS_DEV_LOGIN` **must be unset** in production.
-- The web image inlines `VITE_API_URL` at build time — pass it as a
-  `--build-arg` and rebuild if it changes.
-- Health endpoints for orchestrators: `GET /health`, `GET /health/live`,
-  `GET /health/ready` (503 when the DB is unreachable).
+- The SPA inlines `VITE_API_URL` at build time — set it before building and
+  rebuild/re-upload if it changes.
+- Health endpoints (`GET /health`, `/health/live`, `/health/ready`) serve deploy
+  smoke tests and canaries (503 when the DB is unreachable).
 
-The full runbook — required env vars, Google OIDC provisioning, scaling, backup/
-restore, and TLS — is in **[`standards/deployment.md`](../standards/deployment.md)**.
+`docker-compose.prod.yml` remains only a **local, prod-like integration harness**,
+not the deploy path.
+
+The full runbook — SSM secrets, consuming the existing RDS, Google OIDC
+provisioning, CDK stacks, scaling/connections, backup/restore, and TLS — is in
+**[`standards/deployment.md`](../standards/deployment.md)**.
 
 ### Environment variables (API)
 
+**Secrets** — in production these live in **SSM Parameter Store (`SecureString`)**
+and the app resolves them at runtime; only the parameter **name** is passed to the
+Lambda (e.g. `NEXUS_TOKEN_SECRET_PARAM`). Locally, set the plain variable (or use
+`.env`).
+
+| Secret | Local env var | Production (SSM param name via) | Purpose |
+| --- | --- | --- | --- |
+| Database URL | `DATABASE_URL` | `DATABASE_URL_PARAM` | SQLAlchemy/psycopg URL (contains the DB password). |
+| Token secret | `NEXUS_TOKEN_SECRET` | `NEXUS_TOKEN_SECRET_PARAM` | 24+ char secret signing tokens, hashes, and OIDC state. |
+| OIDC client secret | `NEXUS_OIDC_CLIENT_SECRET` | `NEXUS_OIDC_CLIENT_SECRET_PARAM` | Google OAuth client secret — **server-only**. |
+
+**Non-secret config** — plain env vars on the API Lambda:
+
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | Yes | SQLAlchemy/psycopg URL (contains the DB password). |
-| `NEXUS_TOKEN_SECRET` | Yes | 24+ char secret signing tokens, hashes, and OIDC state. |
-| `NEXUS_OIDC_CLIENT_ID` | Yes (prod) | Google OAuth client id. |
-| `NEXUS_OIDC_CLIENT_SECRET` | Yes (prod) | Google OAuth client secret — **server-only**. |
+| `NEXUS_OIDC_CLIENT_ID` | Yes (prod) | Google OAuth client id (public). |
 | `NEXUS_OIDC_ORG_SLUG` | Optional | Org that OIDC logins map to (default `aircury`). |
 | `NEXUS_PUBLIC_BASE_URL` | Yes | Public API URL; OIDC redirects and CLI links are built from it. |
 | `NEXUS_WEB_BASE_URL` | Yes | Public SPA URL. |
