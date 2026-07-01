@@ -130,6 +130,33 @@ class AuthService:
         self._db.commit()
         return token_response
 
+    def dev_login(self, *, email: str) -> TokenResponse:
+        if not self._settings.dev_login_enabled:
+            raise NotFoundError("resource")
+        user = self._identity_repository.get_user_by_email_for_org(
+            org_id=self._resolve_dev_org_id(), email=email
+        )
+        if user is None or user.status != UserStatus.active:
+            raise UnauthenticatedError("The user cannot authenticate.")
+        return self.create_session_for_user(
+            org_id=user.org_id,
+            user_id=user.id,
+            provider="dev",
+            provider_subject=str(user.id),
+            client_type=AuthClientType.web,
+            client_name="nexus-web",
+            capabilities=[],
+            max_visibility_scope=None,
+        )
+
+    def _resolve_dev_org_id(self) -> UUID:
+        organization = self._identity_repository.get_organization_by_slug(
+            self._settings.dev_login_org_slug
+        )
+        if organization is None:
+            raise NotFoundError("organization")
+        return organization.id
+
     def create_session_for_user(
         self,
         *,

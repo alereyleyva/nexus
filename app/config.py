@@ -20,6 +20,24 @@ class Settings(BaseModel):
     session_seconds: int = 43_200
     cli_authorization_seconds: int = 600
     public_base_url: str = "http://localhost:8000"
+    dev_login_enabled: bool = False
+    dev_login_org_slug: str = "aircury"
+    # Frontend and API deploy separately; the web client calls the API cross-origin.
+    cors_allow_origins: tuple[str, ...] = ("http://localhost:5173",)
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_origins(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return tuple(origin.strip() for origin in raw.split(",") if origin.strip())
 
 
 @lru_cache(maxsize=1)
@@ -29,5 +47,12 @@ def get_settings() -> Settings:
         token_secret=os.getenv("NEXUS_TOKEN_SECRET", Settings.model_fields["token_secret"].default),
         public_base_url=os.getenv(
             "NEXUS_PUBLIC_BASE_URL", Settings.model_fields["public_base_url"].default
+        ),
+        dev_login_enabled=_env_flag("NEXUS_DEV_LOGIN", False),
+        dev_login_org_slug=os.getenv(
+            "NEXUS_DEV_LOGIN_ORG_SLUG", Settings.model_fields["dev_login_org_slug"].default
+        ),
+        cors_allow_origins=_env_origins(
+            "NEXUS_CORS_ORIGINS", Settings.model_fields["cors_allow_origins"].default
         ),
     )

@@ -5,6 +5,7 @@ from datetime import UTC
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
@@ -45,6 +46,14 @@ def create_app() -> FastAPI:
     app.add_exception_handler(ProjectError, handle_project_error)
     app.add_exception_handler(RequestValidationError, handle_validation_error)
     app.add_exception_handler(Exception, unhandled_error_handler)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(settings.cors_allow_origins),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["X-Request-Id"],
+    )
     app.include_router(auth_router)
     app.include_router(memory_entries_router)
     app.include_router(search_router)

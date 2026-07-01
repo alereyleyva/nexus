@@ -75,6 +75,12 @@ class RefreshSessionRequest(BaseModel):
     refresh_token: str
 
 
+class DevLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(min_length=3)
+
+
 class ActorContextResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

@@ -14,6 +14,7 @@ from app.modules.auth.schemas import (
     AuthProvidersResponse,
     CliPendingResponse,
     CliTokenRequest,
+    DevLoginRequest,
     RefreshSessionRequest,
     SessionResponse,
     SessionsResponse,
@@ -60,6 +61,14 @@ def exchange_cli_token(
     if result == "authorization_pending":
         return CliPendingResponse(status="authorization_pending", interval=5)
     return result
+
+
+@router.post("/web/dev-login", response_model=TokenResponse)
+def dev_login(
+    request: DevLoginRequest,
+    db: Session = Depends(get_db_session),
+) -> TokenResponse:
+    return AuthService(db).dev_login(email=request.email)
 
 
 @router.post("/session/refresh", response_model=TokenResponse)
