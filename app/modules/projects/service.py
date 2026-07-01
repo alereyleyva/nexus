@@ -9,7 +9,13 @@ from app.modules.auth.types import ActorContext
 from app.modules.authorization.service import AuthorizationService
 from app.modules.memory_entries.models import MemoryEntry
 from app.modules.memory_entries.repository import MemoryEntryRepository
-from app.modules.projects.schemas import ProjectTimelineEventResponse, ProjectTimelineResponse
+from app.modules.projects.repository import ProjectsRepository
+from app.modules.projects.schemas import (
+    ProjectListResponse,
+    ProjectSummaryResponse,
+    ProjectTimelineEventResponse,
+    ProjectTimelineResponse,
+)
 
 
 class ProjectService:
@@ -17,6 +23,34 @@ class ProjectService:
         self._db = db
         self._authorization = AuthorizationService(db)
         self._memory_repository = MemoryEntryRepository(db)
+        self._projects_repository = ProjectsRepository(db)
+
+    def list_readable_projects(
+        self, *, actor: ActorContext, limit: int = 50
+    ) -> ProjectListResponse:
+        is_org_admin = self._authorization.can_administer_organization(actor)
+        summaries: list[ProjectSummaryResponse] = []
+        for project in self._projects_repository.list_projects(org_id=actor.org_id):
+            effective_role = self._authorization.get_effective_project_role(actor, project.id)
+            if effective_role is None and not is_org_admin:
+                continue
+            summaries.append(
+                ProjectSummaryResponse(
+                    id=project.id,
+                    key=project.key,
+                    name=project.name,
+                    description=project.description,
+                    status=project.status,
+                    owning_group_id=project.owning_group_id,
+                    effective_role=effective_role,
+                )
+            )
+        summaries.sort(key=lambda summary: summary.key)
+        visible = summaries[:limit]
+        return ProjectListResponse(
+            items=visible,
+            page=PageInfo(next_cursor=None, has_more=len(summaries) > limit),
+        )
 
     def timeline(
         self, *, actor: ActorContext, project_id: UUID, limit: int = 50

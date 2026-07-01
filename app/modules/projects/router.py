@@ -8,10 +8,19 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db_session, require_session_capability
 from app.modules.auth.types import ActorContext
-from app.modules.projects.schemas import ProjectTimelineResponse
+from app.modules.projects.schemas import ProjectListResponse, ProjectTimelineResponse
 from app.modules.projects.service import ProjectService
 
 router = APIRouter(prefix="/v1/projects", tags=["projects"])
+
+
+@router.get("", response_model=ProjectListResponse)
+def list_projects(
+    actor: Annotated[ActorContext, Depends(require_session_capability("memory:read"))],
+    db: Session = Depends(get_db_session),
+    limit: int = Query(default=50, ge=1, le=100),
+) -> ProjectListResponse:
+    return ProjectService(db).list_readable_projects(actor=actor, limit=limit)
 
 
 @router.get("/{project_id}/timeline", response_model=ProjectTimelineResponse)
