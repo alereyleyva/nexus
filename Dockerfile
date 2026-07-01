@@ -40,9 +40,16 @@ RUN apt-get update \
 
 WORKDIR /app
 
+# AWS Lambda Web Adapter: lets this unmodified uvicorn image run on Lambda behind
+# API Gateway (ADR-0013). It is a Lambda extension in /opt/extensions and is inert
+# when the image runs anywhere else (local Compose, ECS migrate task).
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt/extensions/lambda-adapter
+
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    AWS_LWA_PORT=8000 \
+    AWS_LWA_READINESS_CHECK_PATH=/health/live
 
 # Virtual environment from the builder, then the application source.
 COPY --from=builder --chown=nexus:nexus /app/.venv /app/.venv

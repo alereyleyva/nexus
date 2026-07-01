@@ -5,6 +5,7 @@
 
 # Python virtualenv and caches
 .venv
+**/.venv
 **/__pycache__
 *.py[cod]
 .pytest_cache
@@ -17,6 +18,13 @@ htmlcov
 # Tests and local tooling (not needed in the runtime image)
 tests
 pyrightconfig.json
+
+# Sibling packages / IaC — not part of the API runtime image. Excluding infra
+# also avoids recursively copying infra/cdk.out into the build context.
+cli
+infra
+**/node_modules
+**/cdk.out
 
 # Web client — built and shipped by web/Dockerfile, not the API image
 web/node_modules
