@@ -427,7 +427,8 @@ production, where **Google OIDC** is the login path.
 
 ### Production: serverless on AWS
 
-Production runs **serverless on AWS, provisioned with the AWS CDK** (ADR-0013):
+Production runs **serverless on AWS, provisioned with the AWS CDK (TypeScript)**
+(ADR-0013), as two independent stacks (`Nexus-Api-<env>`, `Nexus-Web-<env>`):
 
 - **API** → AWS **Lambda** (the root `Dockerfile` as a container image + the AWS
   Lambda Web Adapter, so `uvicorn` runs unchanged) behind an **API Gateway HTTP
@@ -438,15 +439,16 @@ Production runs **serverless on AWS, provisioned with the AWS CDK** (ADR-0013):
 
 ```sh
 cd infra
-cdk diff && cdk deploy --all                                  # provision/update
-aws lambda invoke --function-name nexus-migrate /dev/stdout   # alembic upgrade head
+npm install
+npx cdk diff && npx cdk deploy --all     # provision/update both stacks
+aws ecs run-task ...                      # one-shot Fargate migrate (see infra/README.md)
 ```
 
 Key operational rules:
 
-- The API image **does not** run migrations at startup — a one-shot **migrate
-  Lambda** runs `alembic upgrade head` as a **discrete step**, before traffic
-  shifts.
+- The API image **does not** run migrations at startup — a one-shot **Fargate
+  migrate task** (same image, `alembic upgrade head`) runs as a **discrete step**,
+  before traffic shifts.
 - Secrets (`DATABASE_URL`, `NEXUS_TOKEN_SECRET`, `NEXUS_OIDC_CLIENT_SECRET`) live in
   **SSM Parameter Store (`SecureString`)** and are **resolved at runtime** — never
   plaintext in the Lambda definition or env vars. The OIDC client secret is

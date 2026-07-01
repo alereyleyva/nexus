@@ -168,14 +168,17 @@ The API and web SPA deploy as separate artifacts (ADR-0012):
 | Web SPA | **S3 + CloudFront** | `web/` via `bun run build` (needs `VITE_API_URL` at build time). |
 | Database | **Existing RDS PostgreSQL** — a new `nexus` database inside it | not provisioned here; referenced by CDK. |
 
-Secrets (`DATABASE_URL`, `NEXUS_TOKEN_SECRET`, `NEXUS_OIDC_CLIENT_SECRET`) live in
-**SSM Parameter Store (`SecureString`)** and are resolved at runtime — never
-plaintext in the Lambda definition or env vars. `NEXUS_DEV_LOGIN` must stay unset.
+The CDK app lives in [`infra/`](infra/README.md) as **two independent stacks**
+(`Nexus-Api-<env>`, `Nexus-Web-<env>`). Secrets (`DATABASE_URL`,
+`NEXUS_TOKEN_SECRET`, `NEXUS_OIDC_CLIENT_SECRET`) live in **SSM Parameter Store
+(`SecureString`)** and are resolved at runtime — never plaintext in the Lambda
+definition or env vars. `NEXUS_DEV_LOGIN` must stay unset.
 
 ```sh
 cd infra
-cdk diff && cdk deploy --all                                  # provision/update
-aws lambda invoke --function-name nexus-migrate /dev/stdout   # alembic upgrade head
+npm install
+npx cdk diff && npx cdk deploy --all     # provision/update both stacks
+aws ecs run-task ...                      # one-shot Fargate migrate (alembic upgrade head)
 ```
 
 `docker-compose.prod.yml` is kept only as a **local, prod-like integration

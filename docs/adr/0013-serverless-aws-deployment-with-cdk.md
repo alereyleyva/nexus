@@ -51,15 +51,21 @@ Constraints that shape the decision:
    `get_settings()` does this once per cold start and caches it. The convention is
    uniform — any env var may use an `ssm:` pointer — and non-secret config (public
    URLs, org slug, CORS origins) simply stays as plain values.
-5. **Migrations as a discrete one-shot Lambda.** Alembic runs as a **separate
-   Lambda built from the same image** with `CMD ["alembic","upgrade","head"]`,
-   invoked once per deploy **before** shifting traffic — never at API cold start,
-   so concurrent executions never race on schema changes.
-6. **IaC in CDK (Python).** The infrastructure lives in `infra/` as a CDK app in
-   **Python**, matching the backend so API and infra share one language and
-   toolchain. Stacks are split by lifecycle: a networking/reference stack (VPC and
-   RDS SG lookups), an API stack (Lambda, API Gateway, SSM grants), and a web stack
-   (S3 + CloudFront).
+5. **Migrations as a discrete one-shot Fargate task.** Alembic runs as an ECS
+   **Fargate task** reusing the same image with the command overridden to
+   `alembic upgrade head`, invoked once per deploy (`aws ecs run-task`) **before**
+   shifting traffic — never at API cold start, so concurrent executions never race
+   on schema changes. Fargate is used (rather than a Lambda) because the API image
+   uses the Web Adapter, not the Lambda runtime interface, so it cannot double as a
+   handler-based Lambda; a Fargate task runs the container's command verbatim with
+   no extra code.
+6. **IaC in CDK (TypeScript), two stacks.** The infrastructure lives in `infra/` as
+   a CDK app in **TypeScript**, aligned with the web stack's toolchain. It is split
+   into two independent stacks with no cross-stack references: an **API stack**
+   (VPC/RDS lookups, Lambda, API Gateway, migrate Fargate task, SSM grants) and a
+   **web stack** (S3 + CloudFront). Separate stacks match ADR-0012 — different
+   lifecycles and failure domains, each deployable/rollback-able alone; the web
+   stack needs neither the VPC nor RDS.
 
 ## Consequences
 
@@ -95,7 +101,9 @@ Constraints that shape the decision:
 | Aurora Serverless v2 (new cluster) | An RDS instance already exists; provisioning a second database server is wasteful. Consume the existing instance. |
 | Secrets in Lambda env vars (even if from SSM at deploy time) | Puts secret values in the function definition and CloudFormation; violates the "no plaintext secrets in the Lambda def / env vars" constraint. Resolve at runtime instead. |
 | Migrations at API startup | Multiple concurrent Lambda executions would race on schema changes; run migrations once as a separate step. |
-| CDK in TypeScript | Aligns with the web stack, but Python matches the backend and keeps API + infra in one language; revisit if a TS backend migration ever happens. |
+| Migrate as a handler Lambda (same image) | The Web-Adapter image is not a Lambda-runtime handler; making it one would need a second entrypoint/RIC. A Fargate task runs the container command as-is. |
+| CDK in Python | Would match the backend, but TypeScript aligns with the existing web toolchain and was chosen for infra. |
+| One combined stack | Couples the SPA and API lifecycles; separate stacks let either deploy/roll back alone (ADR-0012). |
 
 ## Links
 

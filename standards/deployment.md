@@ -44,9 +44,9 @@ provision its own database server.
 | Artifact | Build context | Notes |
 | --- | --- | --- |
 | API image | `Dockerfile` (repo root) | Multi-stage, uv, non-root. Reused as a **Lambda container image**; the Lambda Web Adapter runs the existing `uvicorn` command unchanged. |
-| Migrate function | Same image, `CMD ["alembic","upgrade","head"]` | One-shot Lambda run as a discrete deploy step. |
+| Migrate task | Same image, command `alembic upgrade head` | One-shot **Fargate** task run as a discrete deploy step. |
 | Web bundle | `web/` via `bun run build` | Static files uploaded to S3; `VITE_API_URL` inlined at build time. |
-| Infrastructure | `infra/` (CDK, Python) | Provisions everything below except the pre-existing RDS instance and VPC, which are referenced. |
+| Infrastructure | `infra/` (CDK, TypeScript) | Provisions everything below except the pre-existing RDS instance and VPC, which are referenced. |
 
 The API image deliberately does **not** run migrations at startup. Migrations are a
 separate step (see below) so concurrent Lambda executions never race on schema
@@ -165,16 +165,21 @@ and the authorize endpoint returns 404 — do not deploy production without them
 ## Migrations as a deploy step
 
 Alembic reads `DATABASE_URL` via `app/config.py` (resolved from SSM at runtime), so
-the migrate function needs only the `DATABASE_URL_PARAM` env var and the same SSM/
-KMS grants and VPC placement as the API. Run migrations exactly once per deploy,
-before the new API version serves traffic, and never from the API entrypoint.
+the migrate task needs only the `DATABASE_URL=ssm:...` pointer and the same SSM/KMS
+grants and VPC placement as the API. It runs as a one-shot **Fargate** task that
+reuses the API image with the command overridden to `alembic upgrade head`. Run it
+exactly once per deploy, before the new API version serves traffic, and never from
+the API entrypoint.
+
+The API stack outputs the cluster, task family, subnets, and security group needed
+to invoke it:
 
 ```sh
-# One-shot migrate Lambda (same image, alembic command):
-aws lambda invoke --function-name nexus-migrate --payload '{}' /dev/stdout
-
-# CDK can also run it automatically as a deploy-time custom resource/trigger
-# before the API alias shifts to the new version.
+aws ecs run-task \
+  --cluster "$MigrateClusterName" \
+  --task-definition "$MigrateTaskFamily" \
+  --launch-type FARGATE \
+  --network-configuration "awsvpcConfiguration={subnets=[$MigrateSubnetIds],securityGroups=[$MigrateSecurityGroupId],assignPublicIp=DISABLED}"
 ```
 
 Migrations are additive and reviewed per `standards/database-migrations.md`. With
@@ -182,23 +187,26 @@ concurrent API executions, run the single migration step first, then shift traff
 
 ## Provisioning with CDK
 
-Infrastructure lives in `infra/` as a **CDK app in Python**. Split by lifecycle:
+Infrastructure lives in `infra/` as a **CDK app in TypeScript** (see
+`infra/README.md`), split into two independent stacks with no cross-stack
+references:
 
 | Stack | Owns | References |
 | --- | --- | --- |
-| Network/reference | Security-group rules, VPC endpoints, NAT (if not present) | Existing VPC, existing RDS SG |
-| API | Lambda (container image), API Gateway HTTP API, SSM parameter grants, migrate Lambda | ECR repo, SSM params |
-| Web | S3 bucket, CloudFront distribution (OAC), ACM cert, DNS | — |
+| `Nexus-Api-<env>` | Lambda (container image), API Gateway HTTP API, migrate Fargate task, SG rules, SSM/KMS grants | Existing VPC, existing RDS SG, SSM params |
+| `Nexus-Web-<env>` | S3 bucket, CloudFront distribution (OAC), optional ACM cert/domain | — |
 
 ```sh
 cd infra
-uv sync                              # or the CDK app's dependency install
-cdk diff                             # review the change set
-cdk deploy --all                     # provision/update stacks
+npm install
+npm run build                        # tsc type-check
+npx cdk diff                         # review the change set
+npx cdk deploy --all                 # or deploy one stack at a time
 ```
 
-Secrets are created out-of-band (see above) and only **referenced** by name in
-CDK — never passed as values.
+Per-environment values live in `infra/cdk.json` under `context.environments.<env>`;
+select one with `-c env=<name>`. Secrets are created out-of-band (see above) and
+only **referenced** by their SSM parameter name — never passed as values.
 
 ## Health and readiness
 
@@ -252,8 +260,8 @@ PostgreSQL is the single source of truth; back it up accordingly.
 2. Ensure the SSM `SecureString` parameters exist and the Lambda role has
    `ssm:GetParameter` + `kms:Decrypt`. **No secret values in env vars or CDK.**
 3. Confirm `NEXUS_DEV_LOGIN` is unset.
-4. `cdk deploy --all` (review `cdk diff` first).
-5. Invoke the migrate Lambda (`alembic upgrade head`) as a discrete step.
+4. `npx cdk deploy --all` from `infra/` (review `npx cdk diff` first).
+5. Run the migrate Fargate task (`alembic upgrade head`) as a discrete step.
 6. Shift the API alias to the new version; verify `/health/ready` returns 200.
 7. Invalidate the CloudFront cache if the SPA changed.
 8. Smoke-test OIDC login through the SPA.
