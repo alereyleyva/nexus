@@ -76,10 +76,11 @@ function NavItem({ to, label, icon: Icon, compact }: NavEntry & { compact?: bool
     <Link
       to={to}
       className={cn(
-        "transition-signature flex items-center gap-2 rounded-base px-3 py-2 text-sm font-medium text-text no-underline hover:bg-surface-tint",
+        "transition-signature flex items-center gap-2 rounded-base px-3 py-2 text-sm font-medium no-underline",
         compact && "flex-col gap-0.5 text-xs",
       )}
-      activeProps={{ className: "bg-primary text-on-primary hover:bg-primary" }}
+      inactiveProps={{ className: "text-text hover:bg-surface-tint" }}
+      activeProps={{ className: "bg-primary text-on-primary hover:bg-secondary" }}
     >
       <Icon className={cn("h-4 w-4", compact && "h-5 w-5")} />
       <span>{label}</span>
