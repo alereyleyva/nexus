@@ -174,6 +174,7 @@ Initial sort orders:
 | GET | `/v1/auth/oidc/{provider}/authorize` | Start OIDC login for UI or CLI verification. | None |
 | GET | `/v1/auth/oidc/{provider}/callback` | Complete OIDC login. | Provider callback |
 | POST | `/v1/auth/cli/token` | Exchange authorized CLI login for Nexus credentials. | None with one-time device code |
+| POST | `/v1/auth/web/dev-login` | Issue a web session for a seeded user by email. Development only. | None; disabled unless `NEXUS_DEV_LOGIN=true` |
 | POST | `/v1/auth/session/refresh` | Rotate refresh token and issue a new access token. | Refresh token |
 | POST | `/v1/auth/session/revoke` | Revoke current session. | Access or refresh token |
 | GET | `/v1/auth/me` | Return current actor and session context. | `auth:read` if restricted |
@@ -200,6 +201,7 @@ Initial sort orders:
 | GET | `/v1/review-queue` | List memory the actor can review. | `memory:review` |
 | POST | `/v1/search` | Search authorized memory. | `search:read` |
 | POST | `/v1/context-packs` | Generate authorized context pack. | `context_pack:generate` |
+| GET | `/v1/projects` | List projects the actor can see, for UI pickers and filters. | `memory:read` |
 | GET | `/v1/projects/{project_id}/timeline` | Read authorized project memory timeline. | `memory:read` |
 
 ### Admin Endpoints
@@ -425,6 +427,37 @@ Behavior:
 | Storage | Store only refresh token hash. |
 | Reuse detection | Reusing an old refresh token revokes the session and emits a security audit event. |
 | User state | Disabled users cannot refresh sessions. |
+
+### Web Dev Login
+
+```http
+POST /v1/auth/web/dev-login
+```
+
+Development-only endpoint that lets the web client obtain a session without the
+Google OIDC browser flow. It is disabled by default and returns `404 NOT_FOUND`
+unless `NEXUS_DEV_LOGIN=true`.
+
+Request:
+
+```json
+{
+  "email": "pablo@aircury.com"
+}
+```
+
+Behavior:
+
+| Rule | Requirement |
+| --- | --- |
+| Feature flag | Disabled unless `NEXUS_DEV_LOGIN=true`; otherwise `404 NOT_FOUND`. |
+| Organization | Resolves the org from `NEXUS_DEV_LOGIN_ORG_SLUG` (default `aircury`). |
+| User | Resolves an active user by email; unknown/disabled users return `401 UNAUTHENTICATED`. |
+| Session | Issues a normal `web` session with full user permissions and no capability restriction, via the same path as real login. |
+| Production | Must never be enabled in production. Real Google OIDC web login is the production path. |
+
+Response is the standard `TokenResponse` (access token, rotated refresh token,
+session/org/user ids, capabilities, and `max_visibility_scope`).
 
 ### Session Claims
 
@@ -967,6 +1000,46 @@ Response:
   ]
 }
 ```
+
+## List Projects
+
+```http
+GET /v1/projects?limit=50
+```
+
+Lists the projects the actor can see so clients can populate project pickers and
+filters without calling admin endpoints.
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "key": "CECW",
+      "name": "CECW Payments Platform",
+      "description": "Payment synchronization and reconciliation for CECW.",
+      "status": "active",
+      "owning_group_id": "33333333-3333-4333-8333-333333333333",
+      "effective_role": "maintainer"
+    }
+  ],
+  "page": {
+    "next_cursor": null,
+    "has_more": false
+  }
+}
+```
+
+Behavior:
+
+| Rule | Requirement |
+| --- | --- |
+| Authorization | Include a project when the actor has an effective project role, or any org project when the actor is `is_org_admin = true`. |
+| Effective role | Return the actor's effective project role (or `null` for org admins without a role) so clients can gate create/review actions. |
+| Tenant isolation | Only projects in the actor's organization. |
+| No memory bypass | This lists project metadata only; it never exposes memory the actor cannot read. |
 
 ## Project Timeline
 

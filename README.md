@@ -80,6 +80,37 @@ The local database uses the non-secret development defaults from `.env.example`:
 DATABASE_URL=postgresql+psycopg://nexus:nexus_dev_password@localhost:5433/nexus
 ```
 
+## Web Client
+
+The web UI is a React + TanStack Router SPA in `web/`, styled with Tailwind from
+`DESIGN.md`. It lives in this monorepo but **deploys separately** from the API and
+talks to it over the `/v1` API with CORS (ADR-0012). It never accesses the database
+or search indexes directly.
+
+Run the full stack locally:
+
+```sh
+# 1. Database
+docker compose up -d postgres
+uv run alembic upgrade head
+
+# 2. Seed demo org/users/projects/memory
+uv run python -m scripts.seed_dev
+
+# 3. API with local dev-login enabled
+NEXUS_DEV_LOGIN=true uv run uvicorn app.main:app --reload
+
+# 4. Web client (separate terminal)
+cd web
+bun install
+bun run dev   # http://localhost:5173, calls the API at http://localhost:8000
+```
+
+Sign in on the web login page with a seeded email such as `pablo@aircury.com`
+(maintainer/admin), `fabio@aircury.com` (contributor), or `carlos@aircury.com`
+(viewer). Dev-login is disabled unless `NEXUS_DEV_LOGIN=true` and never runs in
+production, where Google OIDC web login is the path.
+
 ## Implementation Modules
 
 | Module | Responsibility |

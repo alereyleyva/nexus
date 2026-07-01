@@ -75,7 +75,13 @@ nexus/
   docs/adr/
   typings/
   scripts/
+
+  web/                      # React/TanStack Router web client (separate deploy)
 ```
+
+The `web/` directory is the frontend client. It is part of the monorepo but builds
+and deploys independently of the API and must not be imported by the Python app.
+Its structure is defined in `../frontend/repository-structure.md`.
 
 Root item responsibilities:
 

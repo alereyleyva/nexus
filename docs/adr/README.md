@@ -17,6 +17,7 @@ ADRs record durable architectural decisions for Nexus. They are binding unless s
 | `0009-projects-owned-by-groups.md` | Require each project to have one owning group. |
 | `0010-oidc-short-lived-user-sessions.md` | Use OIDC login and short-lived user session credentials. |
 | `0011-api-error-contract.md` | Use a stable Problem Details error envelope. |
+| `0012-web-client-and-separate-deployments.md` | Ship the web client in the monorepo but deploy it separately from the API over CORS. |
 
 ## Template
 

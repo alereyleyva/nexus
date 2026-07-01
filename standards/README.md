@@ -14,6 +14,7 @@ Product behavior lives under `specs/`. Engineering standards live here.
 | `backend/internal-services.md` | Internal service responsibilities and function boundaries. |
 | `backend/implementation-templates.md` | Deterministic sync FastAPI/SQLAlchemy module templates and layer skeletons. |
 | `backend/error-audit-patterns.md` | Project exception, Problem Details, and audit persistence implementation pattern. |
+| `frontend/repository-structure.md` | Required layout, stack, and rules for the `web/` client. |
 | `python/style.md` | Python naming, imports, typing, FastAPI, Pydantic, SQLAlchemy, logging, and service style. |
 | `python/code-quality.md` | Ruff, basedpyright, pytest, coverage, and suppression policy. |
 | `testing.md` | Required test classes and invariant list. |

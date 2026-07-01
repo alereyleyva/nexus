@@ -80,6 +80,17 @@ common -> no product modules
 
 Routers are thin. Services own business workflows, transactions, authorization calls, and audit orchestration. Repositories encapsulate persistence and never commit independently.
 
+## Web Client
+
+The React/TanStack Router web client lives in `web/`. It is part of the monorepo but builds and deploys separately from the API (ADR-0012); the Python app must not import it. It is API-only, talks to the API over `/v1` with CORS, and follows `standards/frontend/repository-structure.md` and `DESIGN.md`. Run frontend checks from `web/`:
+
+```sh
+cd web
+bun install
+bun run typecheck
+bun run build
+```
+
 ## Quality Commands
 
 When Python code exists, run these from the repository root before claiming completion:

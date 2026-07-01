@@ -133,6 +133,26 @@ nexus context-pack \
   --max-items 20
 ```
 
+## Web Client Implementation
+
+The minimal UI is a single-page application in `web/`, deployed separately from the
+API (see `../../docs/adr/0012-web-client-and-separate-deployments.md`).
+
+| Concern | Decision |
+| --- | --- |
+| Framework | React + TypeScript with TanStack Router (file-based routing). |
+| Data | TanStack Query over a typed `fetch` client; server state is never duplicated in ad hoc stores. |
+| Styling | Tailwind CSS v4 with design tokens mapped from `DESIGN.md`. |
+| API base URL | Build-time `VITE_API_URL` (default `http://localhost:8000`); the API allows the web origin via CORS. |
+| Auth (dev/local) | `POST /v1/auth/web/dev-login` issues a session; access token in memory, refresh token in browser storage, silent refresh via `/v1/auth/session/refresh`. |
+| Auth (production) | Google OIDC web login (follow-up), same session/token contract. |
+| Errors | Branch on HTTP status and `code` from the problem envelope, never on `detail`. |
+
+Views map to the sections above: Project Memory (`GET /v1/memory-entries`), Review
+Queue (`GET /v1/review-queue` plus review/lifecycle actions), Memory Detail
+(`GET /v1/memory-entries/{id}`), Search (`POST /v1/search`), and Context Pack
+(`POST /v1/context-packs`). Project pickers use `GET /v1/projects`.
+
 ## Client Boundary Rules
 
 | Rule | Requirement |

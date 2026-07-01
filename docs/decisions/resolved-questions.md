@@ -30,6 +30,9 @@ There are no known blocking open questions as of 2026-06-28.
 | OQ-022 | Self-review is prohibited for shared memory. The user who created or owns a `pending_review` or `needs_review` shared entry cannot approve, reject, or reconfirm it; another authorized reviewer must do so. | `../security/authorization.md`, `../api/rest-api.md` |
 | OQ-023 | Bulk memory create is all-or-nothing in v1. Validate all entries first, then create all entries in one transaction; any invalid or unauthorized entry fails the whole request. Per-entry idempotency still applies inside the transaction. | `../api/rest-api.md` |
 | OQ-024 | Audit writes for sensitive operations are part of the same service transaction. If the audit event cannot be persisted, the operation fails and rolls back; audit write failures are also observable as metrics/logs without leaking sensitive bodies. | `../security/security-observability-audit.md`, `../../standards/backend/error-audit-patterns.md` |
+| OQ-025 | The web client lives in the monorepo (`web/`) but deploys separately from the API. The API enables CORS for configured web origins and does not serve the SPA. The client is API-only and respects review. | `../../docs/adr/0012-web-client-and-separate-deployments.md`, `../product/ui-cli.md`, `../../standards/frontend/repository-structure.md` |
+| OQ-026 | Local/dev web login uses a flag-guarded `POST /v1/auth/web/dev-login` (enabled only via `NEXUS_DEV_LOGIN=true`, `404` otherwise) that issues a normal web session for a seeded user. Real Google OIDC web login stays the production path and a follow-up. Dev-login never expands permissions. | `../../docs/adr/0012-web-client-and-separate-deployments.md`, `../api/rest-api.md` |
+| OQ-027 | `GET /v1/projects` lists the projects the actor can see (effective project role, or any project for org admins) to back UI pickers/filters without requiring admin endpoints. | `../api/rest-api.md`, `../security/authorization.md` |
 
 ## Decision Rule
 
