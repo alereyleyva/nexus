@@ -1,193 +1,66 @@
-Welcome to your new TanStack Start app! 
+# Nexus Web Client
 
-# Getting Started
+The Nexus web UI: a React + TanStack Router single-page app for browsing,
+searching, creating, and reviewing governed shared memory, and for approving CLI
+sign-ins. It talks to the Nexus `/v1` API over CORS and never touches the
+database or search indexes directly (ADR-0012). Styling follows
+[`../DESIGN.md`](../DESIGN.md) with Tailwind CSS.
 
-To run this application:
+> **Using the app?** See the end-user [User Guide](../docs/USER_GUIDE.md#the-web-app).
+> **Deploying it?** See the [production runbook](../standards/deployment.md).
 
-```bash
+## Pages
+
+| Route | Purpose |
+| --- | --- |
+| `/login` | Sign in with Google (OIDC) — or dev-login when enabled locally. |
+| `/auth/callback` | Completes the OIDC login and stores the session. |
+| `/cli/approve?code=…` | Approve or deny a `nexus login` request. |
+| `/` (memory list) | Browse authorized memory. |
+| `/memory/new` | Create a memory entry with tags, visibility, and evidence. |
+| `/memory/$id` | Read an entry with its evidence and source context. |
+| `/search` | Full-text search over authorized memory. |
+| `/review` | Reviewers/maintainers approve or reject `pending_review` entries. |
+| `/context-pack` | Assemble a task context pack in the browser. |
+
+## Develop
+
+Requires [Bun](https://bun.sh). The app expects the Nexus API to be reachable at
+`VITE_API_URL` (defaults to `http://localhost:8000`).
+
+```sh
 bun install
-bun --bun run dev
+bun run dev      # http://localhost:5173
 ```
 
-# Building For Production
+To bring up the full local stack (database, migrations, seed data, API with
+dev-login), follow [Run the full stack locally](../README.md#web-client) in the
+root README, then sign in with a seeded email such as `pablo@aircury.com`.
 
-To build this application for production:
+## Test
 
-```bash
-bun --bun run build
+```sh
+bun run test     # Vitest
 ```
 
-## Testing
+## Build for production
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+`VITE_API_URL` is **inlined into the bundle at build time**, so it must be set
+before building and changing it requires a rebuild.
 
-```bash
-bun --bun run test
+```sh
+VITE_API_URL=https://api.nexus.example.com bun run build
 ```
 
-## Styling
+The production image (`web/Dockerfile`) performs this multi-stage Bun build and
+serves the static output with nginx (SPA history fallback). Pass the API URL as a
+build arg:
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `bun install @tailwindcss/vite tailwindcss -D`
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
+```sh
+docker build -t nexus-web --build-arg VITE_API_URL=https://api.nexus.example.com web/
 ```
 
-Then anywhere in your JSX you can use it like so:
+## Tech stack
 
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+React 19 · TanStack Router (file-based routing) · TanStack Query · Tailwind CSS 4
+· Vite · TypeScript · lucide-react · nginx (runtime).
