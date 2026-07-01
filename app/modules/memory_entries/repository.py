@@ -3,8 +3,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, literal_column, select
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.modules.memory_entries.models import (
     MemoryEntry,
@@ -121,3 +122,26 @@ def build_search_document(memory: MemoryEntry) -> str:
         for part in [memory.title, memory.body, memory.rationale or "", " ".join(memory.tags)]
         if part
     )
+
+
+def postgres_search_vector() -> ColumnElement[str]:
+    """Weighted ``tsvector`` expression for ``search_vector`` on PostgreSQL.
+
+    The ``setweight`` weight argument must be the PostgreSQL ``"char"`` type; a
+    bound string binds as ``varchar`` and fails overload resolution, so the
+    weights are emitted as untyped SQL literals that PostgreSQL coerces.
+    """
+    title = func.setweight(
+        func.to_tsvector("simple", func.coalesce(MemoryEntry.title, "")), literal_column("'A'")
+    )
+    body = func.setweight(
+        func.to_tsvector("simple", func.coalesce(MemoryEntry.body, "")), literal_column("'B'")
+    )
+    rationale = func.setweight(
+        func.to_tsvector("simple", func.coalesce(MemoryEntry.rationale, "")), literal_column("'C'")
+    )
+    tags = func.setweight(
+        func.to_tsvector("simple", func.array_to_string(MemoryEntry.tags, " ")),
+        literal_column("'B'"),
+    )
+    return title.op("||")(body).op("||")(rationale).op("||")(tags)

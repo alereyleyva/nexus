@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from typing import NoReturn
 from uuid import UUID
 
-from sqlalchemy import func, update
+from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -30,7 +30,11 @@ from app.modules.memory_entries.models import (
     MemoryStatus,
     VisibilityScope,
 )
-from app.modules.memory_entries.repository import MemoryEntryRepository, build_search_document
+from app.modules.memory_entries.repository import (
+    MemoryEntryRepository,
+    build_search_document,
+    postgres_search_vector,
+)
 from app.modules.memory_entries.schemas import (
     AddGrantRequest,
     BulkCreateMemoryEntriesRequest,
@@ -534,25 +538,10 @@ class MemoryEntryService:
     def _refresh_search_vector(self, memory: MemoryEntry) -> None:
         bind = self._db.get_bind()
         if bind.dialect.name == "postgresql":
-            title_vector = func.setweight(
-                func.to_tsvector("simple", func.coalesce(MemoryEntry.title, "")), "A"
-            )
-            body_vector = func.setweight(
-                func.to_tsvector("simple", func.coalesce(MemoryEntry.body, "")), "B"
-            )
-            rationale_vector = func.setweight(
-                func.to_tsvector("simple", func.coalesce(MemoryEntry.rationale, "")), "C"
-            )
-            tags_vector = func.setweight(
-                func.to_tsvector("simple", func.array_to_string(MemoryEntry.tags, " ")), "B"
-            )
-            search_vector = (
-                title_vector.op("||")(body_vector).op("||")(rationale_vector).op("||")(tags_vector)
-            )
             self._db.execute(
                 update(MemoryEntry)
                 .where(MemoryEntry.id == memory.id)
-                .values(search_vector=search_vector)
+                .values(search_vector=postgres_search_vector())
             )
             return
         memory.search_vector = build_search_document(memory)
