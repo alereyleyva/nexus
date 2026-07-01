@@ -25,6 +25,8 @@ dev = [
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+# The CLI is a separate package with its own tooling config (like web/).
+extend-exclude = ["cli"]
 
 [tool.ruff.lint]
 select = [
