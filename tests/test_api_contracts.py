@@ -16,22 +16,22 @@ def test_timeline_only_returns_authorized_project_memory_events(
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.fabio.id,
+        user_id=seed.riley.id,
         role=ProjectRole.reviewer,
     )
     service = MemoryEntryService(db)
     visible = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.fabio.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.riley.id),
         request=memory_request(
             visibility_scope=VisibilityScope.project,
             project_id=seed.project.id,
         ),
     )
     service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=memory_request(project_id=seed.project.id, title="Private project note"),
     )
     timeline = ProjectService(db).timeline(
-        actor=actor(org_id=seed.org.id, user_id=seed.fabio.id), project_id=seed.project.id
+        actor=actor(org_id=seed.org.id, user_id=seed.riley.id), project_id=seed.project.id
     )
     assert [event.memory_entry_id for event in timeline.events] == [visible.id]

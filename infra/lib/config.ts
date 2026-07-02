@@ -108,7 +108,7 @@ export function getConfig(app: App): NexusConfig {
       kmsKeyArn: typeof ssm.kmsKeyArn === "string" ? ssm.kmsKeyArn : undefined,
     },
     oidcClientId: requireString(raw, "oidcClientId", ctx),
-    oidcOrgSlug: typeof raw.oidcOrgSlug === "string" ? raw.oidcOrgSlug : "aircury",
+    oidcOrgSlug: typeof raw.oidcOrgSlug === "string" ? raw.oidcOrgSlug : "acme",
     publicBaseUrl: requireString(raw, "publicBaseUrl", ctx),
     webBaseUrl: requireString(raw, "webBaseUrl", ctx),
     webLoginRedirectUris: requireString(raw, "webLoginRedirectUris", ctx),

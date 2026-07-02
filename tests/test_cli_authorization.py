@@ -52,18 +52,18 @@ def test_read_unknown_user_code_is_not_found(db: Session) -> None:
 def test_approve_binds_user_and_allows_token_exchange(db: Session, seed: SeedData) -> None:
     service = AuthService(db, settings=_settings())
     device_code, user_code = _start(service)
-    approver = actor(org_id=seed.org.id, user_id=seed.pablo.id)
+    approver = actor(org_id=seed.org.id, user_id=seed.morgan.id)
 
     authorization = service.approve_cli_authorization_for_user(user_code=user_code, actor=approver)
 
     assert authorization.status == CliAuthorizationStatus.approved
     assert authorization.org_id == seed.org.id
-    assert authorization.user_id == seed.pablo.id
+    assert authorization.user_id == seed.morgan.id
 
     tokens = service.exchange_cli_token(device_code=device_code)
     assert not isinstance(tokens, str)
     resolved = service.validate_access_token(token=tokens.access_token, request_id="req")
-    assert resolved.user_id == seed.pablo.id
+    assert resolved.user_id == seed.morgan.id
     assert resolved.session_capabilities == {"memory:create", "memory:read"}
     assert resolved.session_max_visibility_scope == VisibilityScope.project
 
@@ -71,7 +71,7 @@ def test_approve_binds_user_and_allows_token_exchange(db: Session, seed: SeedDat
 def test_deny_blocks_token_exchange(db: Session, seed: SeedData) -> None:
     service = AuthService(db, settings=_settings())
     device_code, user_code = _start(service)
-    denier = actor(org_id=seed.org.id, user_id=seed.pablo.id)
+    denier = actor(org_id=seed.org.id, user_id=seed.morgan.id)
 
     authorization = service.deny_cli_authorization_for_user(user_code=user_code, actor=denier)
     assert authorization.status == CliAuthorizationStatus.denied
@@ -83,7 +83,7 @@ def test_deny_blocks_token_exchange(db: Session, seed: SeedData) -> None:
 def test_approve_twice_conflicts(db: Session, seed: SeedData) -> None:
     service = AuthService(db, settings=_settings())
     _, user_code = _start(service)
-    approver = actor(org_id=seed.org.id, user_id=seed.pablo.id)
+    approver = actor(org_id=seed.org.id, user_id=seed.morgan.id)
 
     service.approve_cli_authorization_for_user(user_code=user_code, actor=approver)
     with pytest.raises(ConflictError):
@@ -96,7 +96,7 @@ def test_expired_authorization_cannot_be_approved(db: Session, seed: SeedData) -
     stored = db.query(AuthCliAuthorization).one()
     stored.expires_at = utc_now() - timedelta(seconds=1)
     db.commit()
-    approver = actor(org_id=seed.org.id, user_id=seed.pablo.id)
+    approver = actor(org_id=seed.org.id, user_id=seed.morgan.id)
 
     with pytest.raises(BadRequestError):
         service.approve_cli_authorization_for_user(user_code=user_code, actor=approver)

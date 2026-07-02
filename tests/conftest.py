@@ -23,9 +23,9 @@ from app.modules.projects.models import Project, ProjectMembership, ProjectRole,
 class SeedData:
     org: Organization
     other_org: Organization
-    pablo: User
-    fabio: User
-    carlos: User
+    morgan: User
+    riley: User
+    dana: User
     group: Group
     other_group: Group
     project: Project
@@ -51,37 +51,37 @@ def db() -> Generator[Session]:
 
 @pytest.fixture
 def seed(db: Session) -> SeedData:
-    org = Organization(slug="aircury", name="Aircury")
+    org = Organization(slug="acme", name="Acme")
     other_org = Organization(slug="other-org", name="Other Org")
     db.add_all([org, other_org])
     db.flush()
-    pablo = User(
+    morgan = User(
         org_id=org.id,
-        email="pablo@example.com",
-        display_name="Pablo",
+        email="morgan@example.com",
+        display_name="Morgan",
         status=UserStatus.active,
     )
-    fabio = User(
+    riley = User(
         org_id=org.id,
-        email="fabio@example.com",
-        display_name="Fabio",
+        email="riley@example.com",
+        display_name="Riley",
         status=UserStatus.active,
     )
-    carlos = User(
+    dana = User(
         org_id=org.id,
-        email="carlos@example.com",
-        display_name="Carlos",
+        email="dana@example.com",
+        display_name="Dana",
         status=UserStatus.active,
     )
-    db.add_all([pablo, fabio, carlos])
+    db.add_all([morgan, riley, dana])
     db.flush()
     db.add_all(
         [
-            OrgMembership(org_id=org.id, user_id=pablo.id, role=OrgRole.member, is_org_admin=False),
-            OrgMembership(org_id=org.id, user_id=fabio.id, role=OrgRole.member, is_org_admin=False),
             OrgMembership(
-                org_id=org.id, user_id=carlos.id, role=OrgRole.member, is_org_admin=False
+                org_id=org.id, user_id=morgan.id, role=OrgRole.member, is_org_admin=False
             ),
+            OrgMembership(org_id=org.id, user_id=riley.id, role=OrgRole.member, is_org_admin=False),
+            OrgMembership(org_id=org.id, user_id=dana.id, role=OrgRole.member, is_org_admin=False),
         ]
     )
     group = Group(org_id=org.id, slug="backend", name="Backend Team", group_type=GroupType.team)
@@ -91,8 +91,8 @@ def seed(db: Session) -> SeedData:
     project = Project(
         org_id=org.id,
         owning_group_id=group.id,
-        key="CECW",
-        name="CECW",
+        key="PAY",
+        name="PAY",
         status=ProjectStatus.active,
     )
     db.add(project)
@@ -100,9 +100,9 @@ def seed(db: Session) -> SeedData:
     return SeedData(
         org=org,
         other_org=other_org,
-        pablo=pablo,
-        fabio=fabio,
-        carlos=carlos,
+        morgan=morgan,
+        riley=riley,
+        dana=dana,
         group=group,
         other_group=other_group,
         project=project,

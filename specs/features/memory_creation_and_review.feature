@@ -4,47 +4,47 @@ Feature: Memory creation and review workflow
   Shared scopes may require human review before becoming active.
 
   Background:
-    Given organization "aircury" exists
-    And active user "pablo" exists in organization "aircury"
-    And active user "fabio" exists in organization "aircury"
-    And group "Backend Team" exists in organization "aircury"
-    And project "CECW" is owned by group "Backend Team"
+    Given organization "acme" exists
+    And active user "morgan" exists in organization "acme"
+    And active user "riley" exists in organization "acme"
+    And group "Backend Team" exists in organization "acme"
+    And project "PAY" is owned by group "Backend Team"
 
   Scenario: Missing visibility defaults to private active memory
-    Given "pablo" is an active organization member
-    When "pablo" creates a memory entry without visibility scope
+    Given "morgan" is an active organization member
+    When "morgan" creates a memory entry without visibility scope
     Then the memory visibility scope is "private"
     And the memory status is "active"
-    And the memory owner is "pablo"
+    And the memory owner is "morgan"
     And an audit event "memory_entry.created" is emitted
 
   Scenario: Active user creates restricted memory as active
-    Given "pablo" is an active organization member
-    When "pablo" creates a "restricted" memory entry
+    Given "morgan" is an active organization member
+    When "morgan" creates a "restricted" memory entry
     Then the memory status is "active"
-    And the memory owner is "pablo"
+    And the memory owner is "morgan"
 
   Scenario: Group member proposes group memory for review
-    Given "pablo" is a "member" of group "Backend Team"
-    When "pablo" creates a "group" memory entry visible to group "Backend Team"
+    Given "morgan" is a "member" of group "Backend Team"
+    When "morgan" creates a "group" memory entry visible to group "Backend Team"
     Then the memory status is "pending_review"
     And the response says review is required
 
   Scenario: Group lead creates group memory as active
-    Given "fabio" is a "lead" of group "Backend Team"
-    When "fabio" creates a "group" memory entry visible to group "Backend Team"
+    Given "riley" is a "lead" of group "Backend Team"
+    When "riley" creates a "group" memory entry visible to group "Backend Team"
     Then the memory status is "active"
     And the response says review is not required
 
   Scenario: Project contributor proposes project memory for review
-    Given "pablo" has effective project role "contributor" in project "CECW"
-    When "pablo" creates a "project" memory entry for project "CECW"
+    Given "morgan" has effective project role "contributor" in project "PAY"
+    When "morgan" creates a "project" memory entry for project "PAY"
     Then the memory status is "pending_review"
     And the response says review is required
 
   Scenario Outline: Project reviewer roles create project memory as active
-    Given "fabio" has effective project role "<role>" in project "CECW"
-    When "fabio" creates a "project" memory entry for project "CECW"
+    Given "riley" has effective project role "<role>" in project "PAY"
+    When "riley" creates a "project" memory entry for project "PAY"
     Then the memory status is "active"
     And the response says review is not required
 
@@ -54,90 +54,90 @@ Feature: Memory creation and review workflow
       | maintainer |
 
   Scenario: Organization member proposes organization memory for review
-    Given "pablo" has organization role "member"
-    When "pablo" creates an "organization" memory entry
+    Given "morgan" has organization role "member"
+    When "morgan" creates an "organization" memory entry
     Then the memory status is "pending_review"
     And the response says review is required
 
   Scenario: Knowledge admin creates organization memory as active
-    Given "fabio" has organization role "knowledge_admin"
-    When "fabio" creates an "organization" memory entry
+    Given "riley" has organization role "knowledge_admin"
+    When "riley" creates an "organization" memory entry
     Then the memory status is "active"
     And the response says review is not required
 
   Scenario: Organization admin alone does not approve organization memory
-    Given "pablo" has organization admin capability
-    And "pablo" does not have organization role "knowledge_admin"
-    When "pablo" creates an "organization" memory entry
+    Given "morgan" has organization admin capability
+    And "morgan" does not have organization role "knowledge_admin"
+    When "morgan" creates an "organization" memory entry
     Then the memory status is "pending_review"
 
   Scenario: Creator cannot self-review shared memory
-    Given "pablo" has effective project role "reviewer" in project "CECW"
-    And "pablo" created a "pending_review" project memory entry in "CECW"
-    When "pablo" approves the memory entry with comment "Approving my own proposal"
+    Given "morgan" has effective project role "reviewer" in project "PAY"
+    And "morgan" created a "pending_review" project memory entry in "PAY"
+    When "morgan" approves the memory entry with comment "Approving my own proposal"
     Then the request is denied
     And an audit event "authorization.denied" is emitted
 
   Scenario: Project reviewer approves project memory
-    Given "pablo" has effective project role "contributor" in project "CECW"
-    And "pablo" created a "pending_review" project memory entry in "CECW"
-    And "fabio" has effective project role "reviewer" in project "CECW"
-    When "fabio" approves the memory entry with comment "Valid and useful"
+    Given "morgan" has effective project role "contributor" in project "PAY"
+    And "morgan" created a "pending_review" project memory entry in "PAY"
+    And "riley" has effective project role "reviewer" in project "PAY"
+    When "riley" approves the memory entry with comment "Valid and useful"
     Then the memory status is "active"
-    And the reviewed by user is "fabio"
+    And the reviewed by user is "riley"
     And an audit event "memory_entry.approved" is emitted
 
   Scenario: Project reviewer rejects speculative project memory
-    Given "pablo" created a "pending_review" project memory entry in "CECW"
-    And "fabio" has effective project role "reviewer" in project "CECW"
-    When "fabio" rejects the memory entry with comment "Too speculative"
+    Given "morgan" created a "pending_review" project memory entry in "PAY"
+    And "riley" has effective project role "reviewer" in project "PAY"
+    When "riley" rejects the memory entry with comment "Too speculative"
     Then the memory status is "rejected"
     And an audit event "memory_entry.rejected" is emitted
 
   Scenario: Needs review memory can be reconfirmed
-    Given a project memory entry in "CECW" has status "needs_review"
-    And "fabio" has effective project role "reviewer" in project "CECW"
-    When "fabio" approves the memory entry with comment "Still valid"
+    Given a project memory entry in "PAY" has status "needs_review"
+    And "riley" has effective project role "reviewer" in project "PAY"
+    When "riley" approves the memory entry with comment "Still valid"
     Then the memory status is "active"
 
   Scenario: Active memory can be marked needs review
-    Given a project memory entry in "CECW" has status "active"
-    And "fabio" has effective project role "reviewer" in project "CECW"
-    When "fabio" marks the memory entry as needs review
+    Given a project memory entry in "PAY" has status "active"
+    And "riley" has effective project role "reviewer" in project "PAY"
+    When "riley" marks the memory entry as needs review
     Then the memory status is "needs_review"
     And an audit event "memory_entry.marked_needs_review" is emitted
 
   Scenario: Active memory can be deprecated
-    Given a project memory entry in "CECW" has status "active"
-    And "fabio" has effective project role "reviewer" in project "CECW"
-    When "fabio" deprecates the memory entry
+    Given a project memory entry in "PAY" has status "active"
+    And "riley" has effective project role "reviewer" in project "PAY"
+    When "riley" deprecates the memory entry
     Then the memory status is "deprecated"
     And an audit event "memory_entry.deprecated" is emitted
 
   Scenario: Project reviewer edits active project memory and it stays active
-    Given a project memory entry in "CECW" has status "active"
-    And "fabio" has effective project role "reviewer" in project "CECW"
-    When "fabio" edits the memory entry body
+    Given a project memory entry in "PAY" has status "active"
+    And "riley" has effective project role "reviewer" in project "PAY"
+    When "riley" edits the memory entry body
     Then the memory status remains "active"
     And an audit event "memory_entry.updated" is emitted
 
   Scenario: Project contributor cannot edit active approved project memory
-    Given a project memory entry in "CECW" has status "active"
-    And "pablo" has effective project role "contributor" in project "CECW"
-    When "pablo" edits the memory entry body
+    Given a project memory entry in "PAY" has status "active"
+    And "morgan" has effective project role "contributor" in project "PAY"
+    When "morgan" edits the memory entry body
     Then the request is denied
     And the memory status remains "active"
     And an audit event "authorization.denied" is emitted
 
   Scenario: Deprecated memory can be archived
-    Given a project memory entry in "CECW" has status "deprecated"
-    And "fabio" has effective project role "maintainer" in project "CECW"
-    When "fabio" archives the memory entry
+    Given a project memory entry in "PAY" has status "deprecated"
+    And "riley" has effective project role "maintainer" in project "PAY"
+    When "riley" archives the memory entry
     Then the memory status is "archived"
     And an audit event "memory_entry.archived" is emitted
 
   Scenario: API does not call LLM during memory creation
-    Given "pablo" creates a memory entry submitted by source tool "codex"
+    Given "morgan" creates a memory entry submitted by source tool "codex"
     When the API persists the memory entry
     Then no LLM provider is called by the API
     And the source tool is recorded as "codex"

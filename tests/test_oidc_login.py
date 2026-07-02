@@ -22,7 +22,7 @@ def _settings() -> Settings:
     return Settings(
         database_url="sqlite+pysqlite:///:memory:",
         token_secret="test-token-secret-with-enough-length",  # noqa: S106 - deterministic test key.
-        oidc_org_slug="aircury",
+        oidc_org_slug="acme",
         web_login_redirect_uris=(_REDIRECT,),
     )
 
@@ -76,7 +76,7 @@ def test_authorize_is_not_found_when_oidc_unconfigured(db: Session) -> None:
 
 
 def test_web_login_happy_path(db: Session, seed: SeedData) -> None:
-    provider = FakeOidcProvider(_identity(email="pablo@example.com"))
+    provider = FakeOidcProvider(_identity(email="morgan@example.com"))
     service = AuthService(db, settings=_settings(), oidc_provider=provider)
     state = _authorize(service, provider)
 
@@ -87,14 +87,14 @@ def test_web_login_happy_path(db: Session, seed: SeedData) -> None:
 
     tokens = service.exchange_web_login(login_code=login_code)
     resolved = service.validate_access_token(token=tokens.access_token, request_id="req")
-    assert resolved.user_id == seed.pablo.id
+    assert resolved.user_id == seed.morgan.id
     assert resolved.org_id == seed.org.id
     assert resolved.session_capabilities == set()
 
 
 @pytest.mark.usefixtures("seed")
 def test_login_code_is_single_use(db: Session) -> None:
-    provider = FakeOidcProvider(_identity(email="pablo@example.com"))
+    provider = FakeOidcProvider(_identity(email="morgan@example.com"))
     service = AuthService(db, settings=_settings(), oidc_provider=provider)
     state = _authorize(service, provider)
     target = service.complete_oidc_login(provider="google", code="auth-code", state=state)
@@ -107,7 +107,7 @@ def test_login_code_is_single_use(db: Session) -> None:
 
 
 def test_unverified_email_is_rejected_without_session(db: Session) -> None:
-    provider = FakeOidcProvider(_identity(email="pablo@example.com", email_verified=False))
+    provider = FakeOidcProvider(_identity(email="morgan@example.com", email_verified=False))
     service = AuthService(db, settings=_settings(), oidc_provider=provider)
     state = _authorize(service, provider)
     target = service.complete_oidc_login(provider="google", code="auth-code", state=state)
@@ -125,9 +125,9 @@ def test_unknown_user_is_rejected(db: Session) -> None:
 
 
 def test_disabled_user_is_rejected(db: Session, seed: SeedData) -> None:
-    seed.carlos.status = UserStatus.disabled
+    seed.dana.status = UserStatus.disabled
     db.commit()
-    provider = FakeOidcProvider(_identity(email="carlos@example.com"))
+    provider = FakeOidcProvider(_identity(email="dana@example.com"))
     service = AuthService(db, settings=_settings(), oidc_provider=provider)
     state = _authorize(service, provider)
     target = service.complete_oidc_login(provider="google", code="auth-code", state=state)
@@ -155,14 +155,14 @@ def test_google_provider_validates_claims() -> None:
         "iss": "https://accounts.google.com",
         "aud": "client-123",
         "sub": "google-subject",
-        "email": "pablo@example.com",
+        "email": "morgan@example.com",
         "email_verified": True,
         "nonce": "nonce-abc",
     }
     _stub_token_request(provider, claims)
     identity = provider.exchange_code(code="c", redirect_uri="r", nonce="nonce-abc")
     assert identity == OidcIdentity(
-        email="pablo@example.com", subject="google-subject", email_verified=True
+        email="morgan@example.com", subject="google-subject", email_verified=True
     )
 
 
@@ -176,7 +176,7 @@ def test_google_provider_rejects_bad_claims(override: dict[str, object]) -> None
         "iss": "https://accounts.google.com",
         "aud": "client-123",
         "sub": "google-subject",
-        "email": "pablo@example.com",
+        "email": "morgan@example.com",
         "email_verified": True,
         "nonce": "nonce-abc",
     }
@@ -195,7 +195,7 @@ def _stub_token_request(provider: GoogleOidcProvider, claims: Mapping[str, objec
     provider._request_id_token = _request  # type: ignore[method-assign]
 
 
-def _identity(*, email: str = "pablo@example.com", email_verified: bool = True) -> OidcIdentity:
+def _identity(*, email: str = "morgan@example.com", email_verified: bool = True) -> OidcIdentity:
     return OidcIdentity(email=email, subject="google-subject", email_verified=email_verified)
 
 

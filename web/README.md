@@ -35,7 +35,7 @@ bun run dev      # http://localhost:5173
 
 To bring up the full local stack (database, migrations, seed data, API with
 dev-login), follow [Run the full stack locally](../README.md#web-client) in the
-root README, then sign in with a seeded email such as `pablo@aircury.com`.
+root README, then sign in with a seeded email such as `avery.stone@example.com`.
 
 ## Test
 

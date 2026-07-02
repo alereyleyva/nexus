@@ -90,7 +90,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add.add_argument("--body", required=True, help="Body text, or '-' to read from stdin.")
     add.add_argument("--rationale")
     add.add_argument("--visibility")
-    add.add_argument("--project", help="Project key, e.g. CECW.")
+    add.add_argument("--project", help="Project key, e.g. PAY.")
     add.add_argument("--group-id", help="Group UUID for group visibility.")
     add.add_argument("--tag", action="append", default=[], dest="tags")
     add.add_argument("--source-tool", help="Defaults to config source_tool or 'nexus-cli'.")

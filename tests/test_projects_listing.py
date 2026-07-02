@@ -15,18 +15,18 @@ from tests.conftest import (
 
 def test_lists_projects_with_effective_role(db: Session, seed: SeedData) -> None:
     add_group_membership(
-        db, org_id=seed.org.id, group_id=seed.group.id, user_id=seed.pablo.id, role=GroupRole.lead
+        db, org_id=seed.org.id, group_id=seed.group.id, user_id=seed.morgan.id, role=GroupRole.lead
     )
     response = ProjectService(db).list_readable_projects(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id)
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id)
     )
-    assert [item.key for item in response.items] == ["CECW"]
+    assert [item.key for item in response.items] == ["PAY"]
     assert response.items[0].effective_role == ProjectRole.maintainer
 
 
 def test_hides_projects_without_effective_role(db: Session, seed: SeedData) -> None:
     response = ProjectService(db).list_readable_projects(
-        actor=actor(org_id=seed.org.id, user_id=seed.carlos.id)
+        actor=actor(org_id=seed.org.id, user_id=seed.dana.id)
     )
     assert response.items == []
 
@@ -36,18 +36,18 @@ def test_explicit_membership_exposes_project(db: Session, seed: SeedData) -> Non
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.carlos.id,
+        user_id=seed.dana.id,
         role=ProjectRole.viewer,
     )
     response = ProjectService(db).list_readable_projects(
-        actor=actor(org_id=seed.org.id, user_id=seed.carlos.id)
+        actor=actor(org_id=seed.org.id, user_id=seed.dana.id)
     )
-    assert [item.key for item in response.items] == ["CECW"]
+    assert [item.key for item in response.items] == ["PAY"]
     assert response.items[0].effective_role == ProjectRole.viewer
 
 
 def test_other_org_actor_sees_no_projects(db: Session, seed: SeedData) -> None:
     response = ProjectService(db).list_readable_projects(
-        actor=actor(org_id=seed.other_org.id, user_id=seed.pablo.id)
+        actor=actor(org_id=seed.other_org.id, user_id=seed.morgan.id)
     )
     assert response.items == []

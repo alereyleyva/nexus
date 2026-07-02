@@ -99,7 +99,7 @@ Form fields:
 
 | Field | Example |
 | --- | --- |
-| Project | `CECW` |
+| Project | `PAY` |
 | Task | `Continue payment sync retries` |
 | Max items | `20` |
 
@@ -169,7 +169,7 @@ Example future command:
 ```sh
 nexus login
 nexus memory add \
-  --project CECW \
+  --project PAY \
   --type decision \
   --visibility project \
   --title "Payment sync retries must use idempotency keys" \
@@ -185,7 +185,7 @@ Example context pack command:
 ```sh
 nexus login
 nexus context-pack \
-  --project CECW \
+  --project PAY \
   --task "Continue payment sync retry implementation" \
   --max-items 20
 ```

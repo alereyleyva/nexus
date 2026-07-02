@@ -4,41 +4,41 @@ Feature: Effective project roles
   If multiple roles apply, the highest role wins.
 
   Background:
-    Given organization "aircury" exists
-    And group "Backend Team" exists in organization "aircury"
-    And group "AI Team" exists in organization "aircury"
-    And project "CECW" is owned by group "Backend Team"
+    Given organization "acme" exists
+    And group "Backend Team" exists in organization "acme"
+    And group "AI Team" exists in organization "acme"
+    And project "PAY" is owned by group "Backend Team"
 
   Scenario: Owning group member derives contributor role
-    Given user "pablo" is a "member" of group "Backend Team"
-    When the system resolves "pablo" effective role in project "CECW"
+    Given user "morgan" is a "member" of group "Backend Team"
+    When the system resolves "morgan" effective role in project "PAY"
     Then the effective project role is "contributor"
 
   Scenario: Owning group lead derives maintainer role
-    Given user "fabio" is a "lead" of group "Backend Team"
-    When the system resolves "fabio" effective role in project "CECW"
+    Given user "riley" is a "lead" of group "Backend Team"
+    When the system resolves "riley" effective role in project "PAY"
     Then the effective project role is "maintainer"
 
   Scenario: Explicit project membership grants access outside owning group
-    Given user "carlos" is a "member" of group "AI Team"
-    And "carlos" has explicit project role "reviewer" in project "CECW"
-    When the system resolves "carlos" effective role in project "CECW"
+    Given user "dana" is a "member" of group "AI Team"
+    And "dana" has explicit project role "reviewer" in project "PAY"
+    When the system resolves "dana" effective role in project "PAY"
     Then the effective project role is "reviewer"
 
   Scenario: Highest project role wins across inherited and explicit roles
-    Given user "pablo" is a "member" of group "Backend Team"
-    And "pablo" has explicit project role "reviewer" in project "CECW"
-    When the system resolves "pablo" effective role in project "CECW"
+    Given user "morgan" is a "member" of group "Backend Team"
+    And "morgan" has explicit project role "reviewer" in project "PAY"
+    When the system resolves "morgan" effective role in project "PAY"
     Then the effective project role is "reviewer"
 
   Scenario: Explicit viewer can read project memory but cannot propose it
-    Given user "carlos" has explicit project role "viewer" in project "CECW"
-    When "carlos" tries to create project memory in "CECW"
+    Given user "dana" has explicit project role "viewer" in project "PAY"
+    When "dana" tries to create project memory in "PAY"
     Then the request is denied
     And an audit event "authorization.denied" is emitted
 
   Scenario: Parent group does not grant permissions in product
     Given group "Engineering" is the parent of group "Backend Team"
-    And user "ana" is a "lead" of group "Engineering"
-    When the system resolves "ana" effective role in project "CECW"
+    And user "jordan" is a "lead" of group "Engineering"
+    When the system resolves "jordan" effective role in project "PAY"
     Then no effective project role is returned

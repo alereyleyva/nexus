@@ -62,7 +62,7 @@ You will see these terms throughout the CLI and web app.
 | Term | Meaning |
 | --- | --- |
 | **Organization** | The top-level tenant. You only ever see memory from your own org. |
-| **Project** | A body of work, identified by a short **key** (e.g. `CECW`). Owned by a group. |
+| **Project** | A body of work, identified by a short **key** (e.g. `PAY`). Owned by a group. |
 | **Group / team** | A set of users; projects are owned by groups. |
 | **Memory entry** | The primary unit: one decision, problem, solution, etc. Has a title, body, type, tags, visibility, and status. |
 | **Source tool** | The tool that created the entry on your behalf (e.g. `codex`, `nexus-cli`). Recorded for provenance. |
@@ -193,7 +193,7 @@ required; everything else is optional.
 ```sh
 # A project decision, proposed for review unless you can publish directly
 nexus memory add \
-  --project CECW \
+  --project PAY \
   --type decision \
   --visibility project \
   --title "Payment sync retries must use idempotency keys" \
@@ -211,7 +211,7 @@ echo "long body…" | nexus memory add --type note --title "Note" --body -
 
 Notes on the flags:
 
-- `--project CECW` — the project **key**. The CLI resolves it to an id for you;
+- `--project PAY` — the project **key**. The CLI resolves it to an id for you;
   if no visible project has that key you get a clear error.
 - `--visibility` — one of the [visibility scopes](#visibility-scopes). Omit it for
   private.
@@ -230,7 +230,7 @@ yet**.
 Search only returns memory you are **authorized** to read:
 
 ```sh
-nexus search --query "idempotency keys" --project CECW --type decision
+nexus search --query "idempotency keys" --project PAY --type decision
 ```
 
 - `--query` is required.
@@ -247,7 +247,7 @@ rendered as **Markdown locally**, ready to paste into an editor or agent prompt:
 
 ```sh
 nexus context-pack \
-  --project CECW \
+  --project PAY \
   --task "Continue payment sync retries" \
   --query "idempotency" \
   --max-items 20
@@ -268,7 +268,7 @@ Persist non-secret settings so you don't repeat flags. Config lives in
 
 ```sh
 nexus config set api_url https://api.nexus.example.com  # used by login and all commands
-nexus config set default_project CECW                   # default for add/search/context-pack
+nexus config set default_project PAY                   # default for add/search/context-pack
 nexus config set source_tool codex                      # default source_tool for memory add
 nexus config list                                       # show everything
 nexus config get api_url                                # print one value
@@ -366,14 +366,14 @@ behalf of a real user*. The CLI is the simplest integration surface.
 
 ```sh
 # 1. Pull relevant, authorized context before working on a task
-nexus context-pack --project CECW --task "Fix flaky payment retry test" > context.md
+nexus context-pack --project PAY --task "Fix flaky payment retry test" > context.md
 
 # 2. …the agent does its work using context.md…
 
 # 3. Capture what was learned, attributed to the tool
 echo "Root cause: retries lacked idempotency keys; added keys keyed on event id." \
   | nexus memory add \
-      --project CECW --type solution --visibility project \
+      --project PAY --type solution --visibility project \
       --title "Fixed flaky payment retry test" --body - \
       --tag payments --source-tool my-agent
 ```
@@ -381,7 +381,7 @@ echo "Root cause: retries lacked idempotency keys; added keys keyed on event id.
 **Tips for non-interactive use**
 
 - Run `nexus login` once as the human; subsequent tool commands refresh silently.
-- Set defaults so scripts stay short: `nexus config set default_project CECW`
+- Set defaults so scripts stay short: `nexus config set default_project PAY`
   and `nexus config set source_tool my-agent`.
 - Use `--body -` to pipe generated content in; avoid shell-quoting large bodies.
 - Check the **exit code** (`0` = ok) and read stdout — the CLI prints the created
@@ -420,8 +420,8 @@ bun install
 bun run dev    # http://localhost:5173, calls the API at http://localhost:8000
 ```
 
-Sign in on the web login page with a seeded email such as `pablo@aircury.com`
-(maintainer/admin), `fabio@aircury.com` (contributor), or `carlos@aircury.com`
+Sign in on the web login page with a seeded email such as `avery.stone@example.com`
+(org admin), `morgan.reed@example.com` (contributor), or `priya.nair@example.com`
 (viewer). Dev-login only works when `NEXUS_DEV_LOGIN=true` and never runs in
 production, where **Google OIDC** is the login path.
 
@@ -489,7 +489,7 @@ use `.env`). The same variable name is used in both cases.
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `NEXUS_OIDC_CLIENT_ID` | Yes (prod) | Google OAuth client id (public). |
-| `NEXUS_OIDC_ORG_SLUG` | Optional | Org that OIDC logins map to (default `aircury`). |
+| `NEXUS_OIDC_ORG_SLUG` | Optional | Org that OIDC logins map to (default `acme`). |
 | `NEXUS_PUBLIC_BASE_URL` | Yes | Public API URL; OIDC redirects and CLI links are built from it. |
 | `NEXUS_WEB_BASE_URL` | Yes | Public SPA URL. |
 | `NEXUS_WEB_LOGIN_REDIRECT_URIS` | Yes | Allowlist of SPA callback URLs for OIDC. |

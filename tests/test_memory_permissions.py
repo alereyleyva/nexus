@@ -23,10 +23,10 @@ from tests.conftest import (
 def test_private_memory_is_readable_by_owner(db: Session, seed: SeedData) -> None:
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), request=memory_request()
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), request=memory_request()
     )
     response = service.get_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), memory_id=created.id
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), memory_id=created.id
     )
     assert response.id == created.id
 
@@ -36,13 +36,13 @@ def test_org_admin_cannot_read_private_memory_owned_by_another_user(
 ) -> None:
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), request=memory_request()
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), request=memory_request()
     )
-    admin_actor = actor(org_id=seed.org.id, user_id=seed.fabio.id)
+    admin_actor = actor(org_id=seed.org.id, user_id=seed.riley.id)
     membership = db.execute(
         select(OrgMembership).where(
             OrgMembership.org_id == seed.org.id,
-            OrgMembership.user_id == seed.fabio.id,
+            OrgMembership.user_id == seed.riley.id,
         )
     ).scalar_one()
     membership.role = OrgRole.member
@@ -54,7 +54,7 @@ def test_org_admin_cannot_read_private_memory_owned_by_another_user(
 
 def test_restricted_memory_is_readable_by_explicit_grantee(db: Session, seed: SeedData) -> None:
     service = MemoryEntryService(db)
-    owner = actor(org_id=seed.org.id, user_id=seed.pablo.id)
+    owner = actor(org_id=seed.org.id, user_id=seed.morgan.id)
     created = service.create_memory(
         actor=owner,
         request=memory_request(visibility_scope=VisibilityScope.restricted),
@@ -62,17 +62,17 @@ def test_restricted_memory_is_readable_by_explicit_grantee(db: Session, seed: Se
     service.add_grant(
         actor=owner,
         memory_id=created.id,
-        request=AddGrantRequest(grantee_user_id=seed.fabio.id, role=GrantRole.viewer),
+        request=AddGrantRequest(grantee_user_id=seed.riley.id, role=GrantRole.viewer),
     )
     response = service.get_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.fabio.id), memory_id=created.id
+        actor=actor(org_id=seed.org.id, user_id=seed.riley.id), memory_id=created.id
     )
     assert response.id == created.id
 
 
 def test_duplicate_grant_conflicts_and_removal_revokes_access(db: Session, seed: SeedData) -> None:
     service = MemoryEntryService(db)
-    owner = actor(org_id=seed.org.id, user_id=seed.pablo.id)
+    owner = actor(org_id=seed.org.id, user_id=seed.morgan.id)
     created = service.create_memory(
         actor=owner,
         request=memory_request(visibility_scope=VisibilityScope.restricted),
@@ -80,18 +80,18 @@ def test_duplicate_grant_conflicts_and_removal_revokes_access(db: Session, seed:
     grant = service.add_grant(
         actor=owner,
         memory_id=created.id,
-        request=AddGrantRequest(grantee_user_id=seed.fabio.id, role=GrantRole.viewer),
+        request=AddGrantRequest(grantee_user_id=seed.riley.id, role=GrantRole.viewer),
     )
     with pytest.raises(ConflictError):
         service.add_grant(
             actor=owner,
             memory_id=created.id,
-            request=AddGrantRequest(grantee_user_id=seed.fabio.id, role=GrantRole.viewer),
+            request=AddGrantRequest(grantee_user_id=seed.riley.id, role=GrantRole.viewer),
         )
     service.delete_grant(actor=owner, memory_id=created.id, grant_id=grant.id)
     with pytest.raises(NotFoundError):
         service.get_memory(
-            actor=actor(org_id=seed.org.id, user_id=seed.fabio.id), memory_id=created.id
+            actor=actor(org_id=seed.org.id, user_id=seed.riley.id), memory_id=created.id
         )
 
 
@@ -100,46 +100,46 @@ def test_project_association_does_not_imply_project_visibility(db: Session, seed
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.fabio.id,
+        user_id=seed.riley.id,
         role=ProjectRole.maintainer,
     )
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=memory_request(project_id=seed.project.id),
     )
     with pytest.raises(NotFoundError):
         service.get_memory(
-            actor=actor(org_id=seed.org.id, user_id=seed.fabio.id), memory_id=created.id
+            actor=actor(org_id=seed.org.id, user_id=seed.riley.id), memory_id=created.id
         )
 
 
 def test_group_and_project_memory_require_membership(db: Session, seed: SeedData) -> None:
     add_group_membership(
-        db, org_id=seed.org.id, group_id=seed.group.id, user_id=seed.pablo.id, role=GroupRole.lead
+        db, org_id=seed.org.id, group_id=seed.group.id, user_id=seed.morgan.id, role=GroupRole.lead
     )
     service = MemoryEntryService(db)
     group_memory = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=memory_request(
             visibility_scope=VisibilityScope.group, visibility_group_id=seed.group.id
         ),
     )
     with pytest.raises(NotFoundError):
         service.get_memory(
-            actor=actor(org_id=seed.org.id, user_id=seed.carlos.id), memory_id=group_memory.id
+            actor=actor(org_id=seed.org.id, user_id=seed.dana.id), memory_id=group_memory.id
         )
 
 
 def test_normal_reads_hide_non_default_statuses(db: Session, seed: SeedData) -> None:
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), request=memory_request()
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), request=memory_request()
     )
     memory = db.execute(select(MemoryEntry).where(MemoryEntry.id == created.id)).scalar_one()
     memory.status = MemoryStatus.deprecated
     db.commit()
     with pytest.raises(NotFoundError):
         service.get_memory(
-            actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), memory_id=created.id
+            actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), memory_id=created.id
         )

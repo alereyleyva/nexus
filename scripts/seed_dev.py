@@ -45,8 +45,8 @@ from app.modules.projects.models import (
     ProjectStatus,
 )
 
-ORG_SLUG = "aircury"
-PROJECT_KEY = "CECW"
+ORG_SLUG = "acme"
+PROJECT_KEY = "PAY"
 GROUP_SLUG = "engineering"
 
 
@@ -55,9 +55,9 @@ class SeededIdentity:
     org_id: UUID
     group_id: UUID
     project_id: UUID
-    pablo_id: UUID
-    fabio_id: UUID
-    carlos_id: UUID
+    admin_id: UUID
+    contributor_id: UUID
+    viewer_id: UUID
 
 
 def seed() -> None:
@@ -77,16 +77,16 @@ def _seed_identity(session: Session) -> SeededIdentity:
         session,
         Organization,
         {"slug": ORG_SLUG},
-        Organization(slug=ORG_SLUG, name="Aircury"),
+        Organization(slug=ORG_SLUG, name="Acme"),
     )
     session.flush()
-    pablo = _get_or_create_user(session, org.id, "pablo@aircury.com", "Pablo Ferrer")
-    fabio = _get_or_create_user(session, org.id, "fabio@aircury.com", "Fabio Nardi")
-    carlos = _get_or_create_user(session, org.id, "carlos@aircury.com", "Carlos Ibáñez")
+    admin = _get_or_create_user(session, org.id, "avery.stone@example.com", "Avery Stone")
+    contributor = _get_or_create_user(session, org.id, "morgan.reed@example.com", "Morgan Reed")
+    viewer = _get_or_create_user(session, org.id, "priya.nair@example.com", "Priya Nair")
     session.flush()
-    _set_org_membership(session, org.id, pablo.id, OrgRole.knowledge_admin, is_org_admin=True)
-    _set_org_membership(session, org.id, fabio.id, OrgRole.member, is_org_admin=False)
-    _set_org_membership(session, org.id, carlos.id, OrgRole.member, is_org_admin=False)
+    _set_org_membership(session, org.id, admin.id, OrgRole.knowledge_admin, is_org_admin=True)
+    _set_org_membership(session, org.id, contributor.id, OrgRole.member, is_org_admin=False)
+    _set_org_membership(session, org.id, viewer.id, OrgRole.member, is_org_admin=False)
     group = _get_or_create(
         session,
         Group,
@@ -99,8 +99,8 @@ def _seed_identity(session: Session) -> SeededIdentity:
         ),
     )
     session.flush()
-    _set_group_membership(session, org.id, group.id, pablo.id, GroupRole.lead)
-    _set_group_membership(session, org.id, group.id, fabio.id, GroupRole.member)
+    _set_group_membership(session, org.id, group.id, admin.id, GroupRole.lead)
+    _set_group_membership(session, org.id, group.id, contributor.id, GroupRole.member)
     project = _get_or_create(
         session,
         Project,
@@ -109,20 +109,20 @@ def _seed_identity(session: Session) -> SeededIdentity:
             org_id=org.id,
             owning_group_id=group.id,
             key=PROJECT_KEY,
-            name="CECW Payments Platform",
-            description="Payment synchronization and reconciliation for CECW.",
+            name="Payments Platform",
+            description="Payment synchronization and reconciliation.",
             status=ProjectStatus.active,
         ),
     )
     session.flush()
-    _set_project_membership(session, org.id, project.id, carlos.id, ProjectRole.viewer)
+    _set_project_membership(session, org.id, project.id, viewer.id, ProjectRole.viewer)
     return SeededIdentity(
         org_id=org.id,
         group_id=group.id,
         project_id=project.id,
-        pablo_id=pablo.id,
-        fabio_id=fabio.id,
-        carlos_id=carlos.id,
+        admin_id=admin.id,
+        contributor_id=contributor.id,
+        viewer_id=viewer.id,
     )
 
 
@@ -188,10 +188,10 @@ class MemorySpec:
 
 def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
     project = identity.project_id
-    pablo = identity.pablo_id
-    fabio = identity.fabio_id
+    admin = identity.admin_id
+    contributor = identity.contributor_id
     payments_context: JsonObject = {
-        "repository_url": "git@github.com:aircury/cecw.git",
+        "repository_url": "git@github.com:example-org/payments-platform.git",
         "branch": "fix/payment-sync-retries",
         "commit_sha": "abc123",
         "files": [
@@ -208,7 +208,7 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
             ),
             rationale="Found while debugging duplicate sync events in production.",
             status=MemoryStatus.active,
-            owner_id=pablo,
+            owner_id=admin,
             project_id=project,
             visibility_scope=VisibilityScope.project,
             source_tool="codex",
@@ -237,7 +237,7 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
                 "sync job double-counts the settlement."
             ),
             status=MemoryStatus.active,
-            owner_id=pablo,
+            owner_id=admin,
             project_id=project,
             visibility_scope=VisibilityScope.project,
             source_tool="codex",
@@ -252,7 +252,7 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
             ),
             rationale="Ledger lookups are cheap and make the sync job replay-safe.",
             status=MemoryStatus.active,
-            owner_id=pablo,
+            owner_id=admin,
             project_id=project,
             visibility_scope=VisibilityScope.project,
             source_tool="opencode",
@@ -266,7 +266,7 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
                 "deadlocked under load. Abandoned in favour of the event ledger."
             ),
             status=MemoryStatus.active,
-            owner_id=pablo,
+            owner_id=admin,
             project_id=project,
             visibility_scope=VisibilityScope.project,
             source_tool="codex",
@@ -280,7 +280,7 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
                 "`nexus-payments replay --batch <id>`. 4. Verify the ledger counts."
             ),
             status=MemoryStatus.active,
-            owner_id=pablo,
+            owner_id=admin,
             project_id=project,
             visibility_scope=VisibilityScope.project,
             source_tool="manual",
@@ -294,7 +294,7 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
                 "seconds can reorder events and mislead reconciliation."
             ),
             status=MemoryStatus.needs_review,
-            owner_id=pablo,
+            owner_id=admin,
             project_id=project,
             visibility_scope=VisibilityScope.project,
             source_tool="codex",
@@ -308,7 +308,7 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
                 "Undecided pending volume metrics."
             ),
             status=MemoryStatus.active,
-            owner_id=pablo,
+            owner_id=admin,
             project_id=project,
             visibility_scope=VisibilityScope.project,
             source_tool="manual",
@@ -320,7 +320,7 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
             body="List endpoints use opaque keyset cursors instead of offset pagination.",
             rationale="Offset pagination is unstable and slow under authorization filters.",
             status=MemoryStatus.pending_review,
-            owner_id=fabio,
+            owner_id=contributor,
             project_id=project,
             visibility_scope=VisibilityScope.project,
             source_tool="codex",
@@ -336,7 +336,7 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
                 "refreshed on status change."
             ),
             status=MemoryStatus.pending_review,
-            owner_id=fabio,
+            owner_id=contributor,
             project_id=project,
             visibility_scope=VisibilityScope.project,
             source_tool="opencode",
@@ -344,10 +344,10 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
         ),
         MemorySpec(
             type=MemoryType.note,
-            title="Personal note: CECW staging credentials rotate on Mondays",
+            title="Personal note: staging credentials rotate on Mondays",
             body="Staging tokens are rotated weekly; refresh the local .env before demos.",
             status=MemoryStatus.active,
-            owner_id=pablo,
+            owner_id=admin,
             project_id=None,
             visibility_scope=VisibilityScope.private,
             source_tool="manual",
@@ -355,10 +355,10 @@ def _memory_specs(identity: SeededIdentity) -> list[MemorySpec]:
         ),
         MemorySpec(
             type=MemoryType.task,
-            title="Add reconciliation dashboard to the CECW ops page",
+            title="Add reconciliation dashboard to the ops page",
             body="Surface ledger drift and last successful sync time on the ops dashboard.",
             status=MemoryStatus.active,
-            owner_id=pablo,
+            owner_id=admin,
             project_id=project,
             visibility_scope=VisibilityScope.organization,
             source_tool="manual",
@@ -467,8 +467,8 @@ def _print_summary(session: Session, identity: SeededIdentity) -> None:
     print(f"Project '{PROJECT_KEY}' project_id={identity.project_id}.")
     print(f"Memory entries in org: {int(memory_count)}.")
     print(
-        "Dev-login emails: pablo@aircury.com (maintainer/admin), fabio@aircury.com "
-        "(contributor), carlos@aircury.com (viewer)."
+        "Login emails: avery.stone@example.com (org admin), morgan.reed@example.com "
+        "(contributor), priya.nair@example.com (viewer)."
     )
 
 

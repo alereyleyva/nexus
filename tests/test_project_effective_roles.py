@@ -10,20 +10,24 @@ from tests.conftest import SeedData, actor, add_group_membership, add_project_me
 
 def test_owning_group_member_derives_contributor_role(db: Session, seed: SeedData) -> None:
     add_group_membership(
-        db, org_id=seed.org.id, group_id=seed.group.id, user_id=seed.pablo.id, role=GroupRole.member
+        db,
+        org_id=seed.org.id,
+        group_id=seed.group.id,
+        user_id=seed.morgan.id,
+        role=GroupRole.member,
     )
     role = AuthorizationService(db).get_effective_project_role(
-        actor(org_id=seed.org.id, user_id=seed.pablo.id), seed.project.id
+        actor(org_id=seed.org.id, user_id=seed.morgan.id), seed.project.id
     )
     assert role == ProjectRole.contributor
 
 
 def test_owning_group_lead_derives_maintainer_role(db: Session, seed: SeedData) -> None:
     add_group_membership(
-        db, org_id=seed.org.id, group_id=seed.group.id, user_id=seed.fabio.id, role=GroupRole.lead
+        db, org_id=seed.org.id, group_id=seed.group.id, user_id=seed.riley.id, role=GroupRole.lead
     )
     role = AuthorizationService(db).get_effective_project_role(
-        actor(org_id=seed.org.id, user_id=seed.fabio.id), seed.project.id
+        actor(org_id=seed.org.id, user_id=seed.riley.id), seed.project.id
     )
     assert role == ProjectRole.maintainer
 
@@ -32,17 +36,21 @@ def test_highest_project_role_wins_across_inherited_and_explicit(
     db: Session, seed: SeedData
 ) -> None:
     add_group_membership(
-        db, org_id=seed.org.id, group_id=seed.group.id, user_id=seed.pablo.id, role=GroupRole.member
+        db,
+        org_id=seed.org.id,
+        group_id=seed.group.id,
+        user_id=seed.morgan.id,
+        role=GroupRole.member,
     )
     add_project_membership(
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.pablo.id,
+        user_id=seed.morgan.id,
         role=ProjectRole.reviewer,
     )
     role = AuthorizationService(db).get_effective_project_role(
-        actor(org_id=seed.org.id, user_id=seed.pablo.id), seed.project.id
+        actor(org_id=seed.org.id, user_id=seed.morgan.id), seed.project.id
     )
     assert role == ProjectRole.reviewer
 
@@ -64,9 +72,9 @@ def test_parent_group_does_not_grant_permissions(db: Session, seed: SeedData) ->
     db.add(project)
     db.commit()
     add_group_membership(
-        db, org_id=seed.org.id, group_id=parent.id, user_id=seed.carlos.id, role=GroupRole.lead
+        db, org_id=seed.org.id, group_id=parent.id, user_id=seed.dana.id, role=GroupRole.lead
     )
     role = AuthorizationService(db).get_effective_project_role(
-        actor(org_id=seed.org.id, user_id=seed.carlos.id), project.id
+        actor(org_id=seed.org.id, user_id=seed.dana.id), project.id
     )
     assert role is None

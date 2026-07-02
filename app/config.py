@@ -56,11 +56,11 @@ class Settings(BaseModel):
     public_base_url: str = "http://localhost:8000"
     web_base_url: str = "http://localhost:5173"
     dev_login_enabled: bool = False
-    dev_login_org_slug: str = "aircury"
+    dev_login_org_slug: str = "acme"
     # Google OIDC production login. Empty client id/secret means OIDC is not configured.
     oidc_client_id: str = ""
     oidc_client_secret: str = ""
-    oidc_org_slug: str = "aircury"
+    oidc_org_slug: str = "acme"
     oidc_state_seconds: int = 600
     web_login_seconds: int = 300
     web_login_redirect_uris: tuple[str, ...] = ("http://localhost:5173/auth/callback",)

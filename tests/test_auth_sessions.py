@@ -18,16 +18,16 @@ def test_oidc_login_creates_session_and_actor_context_resolves(db: Session, seed
     service = AuthService(db, settings=_settings())
     tokens = service.create_session_for_user(
         org_id=seed.org.id,
-        user_id=seed.pablo.id,
+        user_id=seed.morgan.id,
         provider="google",
-        provider_subject="google-pablo",
+        provider_subject="google-morgan",
         client_type=AuthClientType.web,
         client_name="web",
         capabilities=[],
         max_visibility_scope=None,
     )
     actor_context = service.validate_access_token(token=tokens.access_token, request_id="req-auth")
-    assert actor_context.user_id == seed.pablo.id
+    assert actor_context.user_id == seed.morgan.id
     assert actor_context.org_id == seed.org.id
     assert actor_context.session_id == tokens.session_id
 
@@ -36,9 +36,9 @@ def test_refresh_token_rotation_issues_new_credentials(db: Session, seed: SeedDa
     service = AuthService(db, settings=_settings())
     tokens = service.create_session_for_user(
         org_id=seed.org.id,
-        user_id=seed.pablo.id,
+        user_id=seed.morgan.id,
         provider="google",
-        provider_subject="google-pablo",
+        provider_subject="google-morgan",
         client_type=AuthClientType.cli,
         client_name="nexus-cli",
         capabilities=["memory:read"],
@@ -58,9 +58,9 @@ def test_refresh_token_reuse_revokes_session(db: Session, seed: SeedData) -> Non
     service = AuthService(db, settings=_settings())
     tokens = service.create_session_for_user(
         org_id=seed.org.id,
-        user_id=seed.pablo.id,
+        user_id=seed.morgan.id,
         provider="google",
-        provider_subject="google-pablo",
+        provider_subject="google-morgan",
         client_type=AuthClientType.cli,
         client_name="nexus-cli",
         capabilities=[],
@@ -75,7 +75,7 @@ def test_session_capability_is_required_for_restricted_sessions(
     db: Session, seed: SeedData
 ) -> None:
     restricted_actor = actor(
-        org_id=seed.org.id, user_id=seed.pablo.id, capabilities={"memory:read"}
+        org_id=seed.org.id, user_id=seed.morgan.id, capabilities={"memory:read"}
     )
     with pytest.raises(AuthorizationDeniedError):
         AuthorizationService(db).require_capability(restricted_actor, "memory:create")
@@ -84,7 +84,7 @@ def test_session_capability_is_required_for_restricted_sessions(
 def test_session_cannot_create_above_max_visibility_scope(db: Session, seed: SeedData) -> None:
     restricted_actor = actor(
         org_id=seed.org.id,
-        user_id=seed.pablo.id,
+        user_id=seed.morgan.id,
         capabilities={"memory:create"},
         max_visibility_scope=VisibilityScope.project,
     )
@@ -106,7 +106,7 @@ def test_cli_authorization_polls_then_exchanges_once(db: Session, seed: SeedData
     assert pending == "authorization_pending"
     service.approve_cli_authorization_for_user(
         user_code=started.user_code,
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
     )
     exchanged = service.exchange_cli_token(device_code=started.device_code)
     assert exchanged != "authorization_pending"
@@ -118,9 +118,9 @@ def test_session_listing_and_revocation(db: Session, seed: SeedData) -> None:
     service = AuthService(db, settings=_settings())
     tokens = service.create_session_for_user(
         org_id=seed.org.id,
-        user_id=seed.pablo.id,
+        user_id=seed.morgan.id,
         provider="google",
-        provider_subject="google-pablo",
+        provider_subject="google-morgan",
         client_type=AuthClientType.web,
         client_name="web",
         capabilities=[],

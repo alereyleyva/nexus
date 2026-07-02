@@ -1,28 +1,28 @@
 ---
 version: alpha
-name: Aircury
-description: Visual identity for Aircury — powerful, ethical software for the education sector. Calm ocean blues, soft teals, and a single confident green, extracted from aircury.com.
+name: Acme
+description: Visual identity for Acme — powerful, ethical software. Calm ocean blues, soft teals, and a single confident green.
 colors:
   # Core
-  primary: "#0C4A6E"          # aircury-blue — deep ocean ink
-  secondary: "#006591"        # aircury-lightblue — wordmark, links, accents
-  tertiary: "#57BC90"         # aircury-green — primary call-to-action
+  primary: "#0C4A6E"          # brand-blue — deep ocean ink
+  secondary: "#006591"        # brand-lightblue — wordmark, links, accents
+  tertiary: "#57BC90"         # brand-green — primary call-to-action
   accent: "#F6E05E"           # warm yellow — secondary highlight
   # Brand teals / greens
-  teal: "#7DBFBB"             # aircury-darkgreen — section covers, brand panels
-  teal-soft: "#91CAC4"        # aircury-gray — muted teal
-  green-deep: "#31A07F"       # aircury-mutedgreen — logo gradient terminus
+  teal: "#7DBFBB"             # brand-darkgreen — section covers, brand panels
+  teal-soft: "#91CAC4"        # brand-gray — muted teal
+  green-deep: "#31A07F"       # brand-mutedgreen — logo gradient terminus
   motif: "#90C9C5"            # ambient pebble decoration tint
   # Surfaces
-  background: "#EBF5F6"       # aircury-lightgray — default page background
+  background: "#EBF5F6"       # brand-lightgray — default page background
   surface: "#FFFFFF"          # card surface
-  surface-muted: "#F8FAFC"    # aircury-slate — partner pills, insets
-  surface-tint: "#DBEDED"     # aircury-darkgray — dividers, tints
-  surface-washed: "#ECF5F5"   # aircury-washedwhite — padded blocks
+  surface-muted: "#F8FAFC"    # brand-slate — partner pills, insets
+  surface-tint: "#DBEDED"     # brand-darkgray — dividers, tints
+  surface-washed: "#ECF5F5"   # brand-washedwhite — padded blocks
   # Text
-  text: "#334155"             # aircury-blueslate — body copy
-  text-muted: "#61657C"       # aircury-mutedblue — captions, metadata
-  text-subtle: "#595959"      # aircury-muted — fine print
+  text: "#334155"             # brand-blueslate — body copy
+  text-muted: "#61657C"       # brand-mutedblue — captions, metadata
+  text-subtle: "#595959"      # brand-muted — fine print
   # On-color (foregrounds)
   on-primary: "#FFFFFF"
   on-tertiary: "#FFFFFF"
@@ -168,10 +168,9 @@ components:
 
 ## Overview
 
-Aircury builds custom, high-quality software for schools, multi-academy trusts,
-universities, non-profits and startups. The identity has to read as **trustworthy,
+Acme builds custom, high-quality software. The identity has to read as **trustworthy,
 calm and competent** — never loud. Think of a quiet engineering studio with a
-public-sector conscience: precise, warm, and human.
+conscience: precise, warm, and human.
 
 The system is anchored by two deep blues and a family of soft teals, lifted by a
 single confident green that carries every primary action. Backgrounds are tinted
@@ -217,7 +216,7 @@ WCAG AA. The green CTA carries white text; the yellow accent carries slate ink.
 Two families do all the work.
 
 - **Foco** — the brand display face, used for the **wordmark and key brand moments
-  only**. Weight 900, tight tracking. It is a licensed face served from Aircury's
+  only**. Weight 900, tight tracking. It is a licensed face served from Acme's
   CDN; fall back to a humanist sans (`sans-serif`) where unavailable.
 - **Inter** — the workhorse for every heading, paragraph, button and label. Ranges
   from 400 body to 800 hero weights.
@@ -263,7 +262,7 @@ transition timing across the system.
 Everything is rounded; nothing is sharp.
 
 - **base 4px** — nav items, small chips.
-- **md 6px** — buttons (the canonical Aircury button radius).
+- **md 6px** — buttons (the canonical Acme button radius).
 - **lg 8px / xl 12px** — inner elements, capability chips, swatches.
 - **card 16px** — content cards and coloured panels.
 - **pill 20px** — partner-logo pills (fixed 300×150 on `surface-muted`).

@@ -26,7 +26,7 @@ from tests.conftest import (
 
 def test_missing_visibility_defaults_to_private_active_memory(db: Session, seed: SeedData) -> None:
     result = MemoryEntryService(db).create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=memory_request(),
     )
     assert result.visibility_scope == VisibilityScope.private
@@ -36,10 +36,14 @@ def test_missing_visibility_defaults_to_private_active_memory(db: Session, seed:
 
 def test_group_member_proposes_group_memory_for_review(db: Session, seed: SeedData) -> None:
     add_group_membership(
-        db, org_id=seed.org.id, group_id=seed.group.id, user_id=seed.pablo.id, role=GroupRole.member
+        db,
+        org_id=seed.org.id,
+        group_id=seed.group.id,
+        user_id=seed.morgan.id,
+        role=GroupRole.member,
     )
     result = MemoryEntryService(db).create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=memory_request(
             visibility_scope=VisibilityScope.group, visibility_group_id=seed.group.id
         ),
@@ -53,11 +57,11 @@ def test_project_reviewer_creates_project_memory_as_active(db: Session, seed: Se
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.fabio.id,
+        user_id=seed.riley.id,
         role=ProjectRole.reviewer,
     )
     result = MemoryEntryService(db).create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.fabio.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.riley.id),
         request=memory_request(
             visibility_scope=VisibilityScope.project, project_id=seed.project.id
         ),
@@ -71,12 +75,12 @@ def test_creator_cannot_self_review_shared_memory(db: Session, seed: SeedData) -
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.pablo.id,
+        user_id=seed.morgan.id,
         role=ProjectRole.reviewer,
     )
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=memory_request(
             visibility_scope=VisibilityScope.project,
             project_id=seed.project.id,
@@ -87,7 +91,7 @@ def test_creator_cannot_self_review_shared_memory(db: Session, seed: SeedData) -
     db.commit()
     with pytest.raises(AuthorizationDeniedError):
         service.review_memory(
-            actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+            actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
             memory_id=created.id,
             request=ReviewMemoryEntryRequest(decision="approve", review_comment="self"),
         )
@@ -98,25 +102,25 @@ def test_project_reviewer_approves_project_memory(db: Session, seed: SeedData) -
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.pablo.id,
+        user_id=seed.morgan.id,
         role=ProjectRole.contributor,
     )
     add_project_membership(
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.fabio.id,
+        user_id=seed.riley.id,
         role=ProjectRole.reviewer,
     )
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=memory_request(
             visibility_scope=VisibilityScope.project, project_id=seed.project.id
         ),
     )
     reviewed = service.review_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.fabio.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.riley.id),
         memory_id=created.id,
         request=ReviewMemoryEntryRequest(decision="approve", review_comment="valid"),
     )
@@ -130,26 +134,26 @@ def test_project_contributor_cannot_edit_active_approved_project_memory(
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.fabio.id,
+        user_id=seed.riley.id,
         role=ProjectRole.reviewer,
     )
     add_project_membership(
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.pablo.id,
+        user_id=seed.morgan.id,
         role=ProjectRole.contributor,
     )
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.fabio.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.riley.id),
         request=memory_request(
             visibility_scope=VisibilityScope.project, project_id=seed.project.id
         ),
     )
     with pytest.raises(AuthorizationDeniedError):
         service.update_memory(
-            actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+            actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
             memory_id=created.id,
             request=UpdateMemoryEntryRequest(body="unsafe rewrite"),
         )
@@ -157,7 +161,7 @@ def test_project_contributor_cannot_edit_active_approved_project_memory(
 
 def test_bulk_create_creates_independent_entries_atomically(db: Session, seed: SeedData) -> None:
     response = MemoryEntryService(db).bulk_create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=BulkCreateMemoryEntriesRequest(
             entries=[memory_request(), memory_request(title="Second")]
         ),
@@ -171,10 +175,10 @@ def test_owner_updates_private_memory_and_refreshes_search_document(
 ) -> None:
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), request=memory_request()
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), request=memory_request()
     )
     updated = service.update_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         memory_id=created.id,
         request=UpdateMemoryEntryRequest(title="Updated idempotency", tags=["updated"]),
     )
@@ -185,7 +189,7 @@ def test_owner_updates_private_memory_and_refreshes_search_document(
 
 def test_private_memory_visibility_lifecycle_and_delete(db: Session, seed: SeedData) -> None:
     service = MemoryEntryService(db)
-    owner = actor(org_id=seed.org.id, user_id=seed.pablo.id)
+    owner = actor(org_id=seed.org.id, user_id=seed.morgan.id)
     created = service.create_memory(actor=owner, request=memory_request())
     restricted = service.change_visibility(
         actor=owner,
@@ -212,22 +216,22 @@ def test_review_queue_returns_only_reviewable_memory(db: Session, seed: SeedData
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.pablo.id,
+        user_id=seed.morgan.id,
         role=ProjectRole.contributor,
     )
     add_project_membership(
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.fabio.id,
+        user_id=seed.riley.id,
         role=ProjectRole.reviewer,
     )
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=memory_request(
             visibility_scope=VisibilityScope.project, project_id=seed.project.id
         ),
     )
-    queue = service.review_queue(actor=actor(org_id=seed.org.id, user_id=seed.fabio.id))
+    queue = service.review_queue(actor=actor(org_id=seed.org.id, user_id=seed.riley.id))
     assert [item.id for item in queue.items] == [created.id]

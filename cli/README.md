@@ -34,7 +34,7 @@ nexus whoami
 ```sh
 # Capture a decision (proposed for review unless you can publish directly)
 nexus memory add \
-  --project CECW \
+  --project PAY \
   --type decision \
   --visibility project \
   --title "Payment sync retries must use idempotency keys" \
@@ -46,10 +46,10 @@ nexus memory add \
 echo "long body..." | nexus memory add --type note --title "Note" --body -
 
 # Search authorized memory
-nexus search --query "idempotency keys" --project CECW --type decision
+nexus search --query "idempotency keys" --project PAY --type decision
 
 # Assemble a task context pack (rendered as Markdown locally)
-nexus context-pack --project CECW --task "Continue payment sync retries" --max-items 20
+nexus context-pack --project PAY --task "Continue payment sync retries" --max-items 20
 
 nexus logout
 ```
@@ -64,7 +64,7 @@ Persist user configuration with `nexus config` (stored in
 
 ```sh
 nexus config set api_url https://api.nexus.example.com   # used by `nexus login` and all commands
-nexus config set default_project CECW                    # default project for add/search/context-pack
+nexus config set default_project PAY                    # default project for add/search/context-pack
 nexus config set source_tool codex                       # default source_tool for `memory add`
 nexus config list
 nexus config get api_url

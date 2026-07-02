@@ -16,7 +16,7 @@ Real users are the only permission actors in the product. AI tools are recorded 
 Example audit semantics:
 
 ```text
-Pablo created this memory using Codex CLI.
+Morgan created this memory using Codex CLI.
 ```
 
 Not:

@@ -97,7 +97,7 @@ Set on the API Lambda directly (no secret content):
 | Variable | Purpose |
 | --- | --- |
 | `NEXUS_OIDC_CLIENT_ID` | Google OAuth client id (public). |
-| `NEXUS_OIDC_ORG_SLUG` | Org that OIDC logins map to (default `aircury`). |
+| `NEXUS_OIDC_ORG_SLUG` | Org that OIDC logins map to (default `acme`). |
 | `NEXUS_PUBLIC_BASE_URL` | Public API base URL (the API Gateway custom domain). OIDC redirect and CLI links are built from it. |
 | `NEXUS_WEB_BASE_URL` | Public SPA base URL (the CloudFront custom domain). |
 | `NEXUS_WEB_LOGIN_REDIRECT_URIS` | Comma-separated allowlist of SPA callback URLs for OIDC. |

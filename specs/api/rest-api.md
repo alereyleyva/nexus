@@ -534,7 +534,7 @@ Request:
 
 ```json
 {
-  "email": "pablo@aircury.com"
+  "email": "avery.stone@example.com"
 }
 ```
 
@@ -543,7 +543,7 @@ Behavior:
 | Rule | Requirement |
 | --- | --- |
 | Feature flag | Disabled unless `NEXUS_DEV_LOGIN=true`; otherwise `404 NOT_FOUND`. |
-| Organization | Resolves the org from `NEXUS_DEV_LOGIN_ORG_SLUG` (default `aircury`). |
+| Organization | Resolves the org from `NEXUS_DEV_LOGIN_ORG_SLUG` (default `acme`). |
 | User | Resolves an active user by email; unknown/disabled users return `401 UNAUTHENTICATED`. |
 | Session | Issues a normal `web` session with full user permissions and no capability restriction, via the same path as real login. |
 | Production | Must never be enabled in production. Real Google OIDC web login is the production path. |
@@ -590,7 +590,7 @@ Request:
   "confidence": 0.87,
   "tags": ["payments", "sync", "idempotency"],
   "source_context": {
-    "repository_url": "git@github.com:company/cecw.git",
+    "repository_url": "git@github.com:example-org/payments-platform.git",
     "branch": "fix/payment-sync-retries",
     "commit_sha": "abc123",
     "files": [
@@ -763,7 +763,7 @@ Approve request:
 ```json
 {
   "decision": "approve",
-  "review_comment": "Valid and useful for the CECW project."
+  "review_comment": "Valid and useful for the PAY project."
 }
 ```
 
@@ -1109,9 +1109,9 @@ Response:
   "items": [
     {
       "id": "11111111-1111-4111-8111-111111111111",
-      "key": "CECW",
-      "name": "CECW Payments Platform",
-      "description": "Payment synchronization and reconciliation for CECW.",
+      "key": "PAY",
+      "name": "Payments Platform",
+      "description": "Payment synchronization and reconciliation for PAY.",
       "status": "active",
       "owning_group_id": "33333333-3333-4333-8333-333333333333",
       "effective_role": "maintainer"
@@ -1196,7 +1196,7 @@ Example future CLI:
 ```sh
 nexus login
 nexus memory add \
-  --project CECW \
+  --project PAY \
   --type decision \
   --visibility project \
   --title "Payment sync retries must use idempotency keys" \
@@ -1211,7 +1211,7 @@ Context pack CLI:
 
 ```sh
 nexus context-pack \
-  --project CECW \
+  --project PAY \
   --task "Continue payment sync retry implementation" \
   --max-items 20
 ```

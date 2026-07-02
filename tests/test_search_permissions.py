@@ -17,10 +17,10 @@ def test_search_finds_authorized_memory_by_title_body_rationale_and_tags(
 ) -> None:
     service = MemoryEntryService(db)
     service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), request=memory_request()
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), request=memory_request()
     )
     search = SearchService(db).search(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=SearchRequest(query="retry path", tags=["payments"], limit=10),
     )
     assert len(search.results) == 1
@@ -31,10 +31,10 @@ def test_search_does_not_return_private_memory_owned_by_another_user(
     db: Session, seed: SeedData
 ) -> None:
     MemoryEntryService(db).create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), request=memory_request()
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), request=memory_request()
     )
     search = SearchService(db).search(
-        actor=actor(org_id=seed.org.id, user_id=seed.fabio.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.riley.id),
         request=SearchRequest(query="payment", limit=10),
     )
     assert search.results == []
@@ -47,15 +47,15 @@ def test_search_project_filter_does_not_bypass_private_visibility(
         db,
         org_id=seed.org.id,
         project_id=seed.project.id,
-        user_id=seed.fabio.id,
+        user_id=seed.riley.id,
         role=ProjectRole.maintainer,
     )
     MemoryEntryService(db).create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=memory_request(project_id=seed.project.id),
     )
     search = SearchService(db).search(
-        actor=actor(org_id=seed.org.id, user_id=seed.fabio.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.riley.id),
         request=SearchRequest(query="payment", project_id=seed.project.id, limit=10),
     )
     assert search.results == []
@@ -66,17 +66,17 @@ def test_search_excludes_hidden_statuses_by_default_and_allows_deprecated_explic
 ) -> None:
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), request=memory_request()
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), request=memory_request()
     )
     memory = db.execute(select(MemoryEntry).where(MemoryEntry.id == created.id)).scalar_one()
     memory.status = MemoryStatus.deprecated
     db.commit()
     default_search = SearchService(db).search(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=SearchRequest(query="payment", limit=10),
     )
     explicit_search = SearchService(db).search(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=SearchRequest(query="payment", statuses=[MemoryStatus.deprecated], limit=10),
     )
     assert default_search.results == []
@@ -85,7 +85,7 @@ def test_search_excludes_hidden_statuses_by_default_and_allows_deprecated_explic
 
 def test_search_audit_stores_hash_instead_of_raw_query(db: Session, seed: SeedData) -> None:
     SearchService(db).search(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=SearchRequest(query="secret customer payment issue", limit=10),
     )
     event = db.execute(
@@ -100,13 +100,13 @@ def test_search_returns_needs_review_memory_with_warning_marker(
 ) -> None:
     service = MemoryEntryService(db)
     created = service.create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), request=memory_request()
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), request=memory_request()
     )
     memory = db.execute(select(MemoryEntry).where(MemoryEntry.id == created.id)).scalar_one()
     memory.status = MemoryStatus.needs_review
     db.commit()
     search = SearchService(db).search(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=SearchRequest(query="payment", statuses=[MemoryStatus.needs_review], limit=10),
     )
     assert search.results[0].status == MemoryStatus.needs_review

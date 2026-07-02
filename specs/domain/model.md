@@ -411,7 +411,7 @@ Code example:
 
 ```json
 {
-  "repository_url": "git@github.com:company/cecw.git",
+  "repository_url": "git@github.com:example-org/payments-platform.git",
   "branch": "fix/payment-sync-retries",
   "commit_sha": "abc123",
   "pull_request": 42,
@@ -429,9 +429,9 @@ Meeting example:
 
 ```json
 {
-  "meeting_title": "CECW handover planning",
+  "meeting_title": "Project handover planning",
   "meeting_date": "2026-06-28",
-  "participants": ["pablo@company.com", "fabio@company.com"]
+  "participants": ["morgan@company.com", "riley@company.com"]
 }
 ```
 
@@ -439,8 +439,8 @@ Document example:
 
 ```json
 {
-  "document_title": "CECW Architecture Notes",
-  "document_url": "internal-docs://cecw-architecture",
+  "document_title": "Architecture Notes",
+  "document_url": "internal-docs://project-architecture",
   "section": "Payment sync"
 }
 ```

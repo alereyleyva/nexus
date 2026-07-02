@@ -22,9 +22,9 @@ def test_memory_list_uses_limit_and_page_metadata(db: Session, seed: SeedData) -
     service = MemoryEntryService(db)
     for index in range(3):
         service.create_memory(
-            actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+            actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
             request=memory_request(title=f"Memory {index}", body="body"),
         )
-    page = service.list_memory(actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), limit=2)
+    page = service.list_memory(actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), limit=2)
     assert len(page.items) == 2
     assert page.page.has_more is True

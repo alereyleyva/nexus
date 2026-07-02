@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..900;1,14..32,400..600&display=swap");
 @import "tailwindcss";
 
-/* Design tokens mapped from DESIGN.md (Aircury visual identity). */
+/* Design tokens mapped from DESIGN.md (Acme visual identity). */
 @theme {
   --color-primary: #0c4a6e;
   --color-secondary: #006591;

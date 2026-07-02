@@ -17,9 +17,9 @@ Examples:
 
 | `project_id` | `visibility_scope` | Meaning |
 | --- | --- | --- |
-| `CECW` | `private` | Talks about CECW, only owner reads it. |
-| `CECW` | `project` | Talks about CECW and project audience reads it. |
-| `CECW` | `group` | Talks about CECW and only selected group reads it. |
+| `PAY` | `private` | Talks about PAY, only owner reads it. |
+| `PAY` | `project` | Talks about PAY and project audience reads it. |
+| `PAY` | `group` | Talks about PAY and only selected group reads it. |
 
 ## Consequences
 

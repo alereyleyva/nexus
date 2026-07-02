@@ -21,7 +21,7 @@
           "kmsKeyArn": ""
         },
         "oidcClientId": "REPLACE_WITH_GOOGLE_OAUTH_CLIENT_ID",
-        "oidcOrgSlug": "aircury",
+        "oidcOrgSlug": "acme",
         "publicBaseUrl": "https://api.nexus.example.com",
         "webBaseUrl": "https://app.nexus.example.com",
         "webLoginRedirectUris": "https://app.nexus.example.com/auth/callback",

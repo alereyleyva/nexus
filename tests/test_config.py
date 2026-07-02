@@ -25,7 +25,7 @@ def test_missing_env_uses_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("NEXUS_OIDC_ORG_SLUG", raising=False)
     _clear()
     try:
-        assert config.get_settings().oidc_org_slug == "aircury"
+        assert config.get_settings().oidc_org_slug == "acme"
     finally:
         _clear()
 

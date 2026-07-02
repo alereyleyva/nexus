@@ -14,7 +14,7 @@ from tests.conftest import SeedData, actor, memory_request
 
 def test_create_memory_emits_safe_audit_event(db: Session, seed: SeedData) -> None:
     created = MemoryEntryService(db).create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id, request_id="req-create"),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id, request_id="req-create"),
         request=memory_request(),
     )
     event = db.execute(
@@ -23,18 +23,18 @@ def test_create_memory_emits_safe_audit_event(db: Session, seed: SeedData) -> No
         )
     ).scalar_one()
     assert event.org_id == seed.org.id
-    assert event.actor_user_id == seed.pablo.id
+    assert event.actor_user_id == seed.morgan.id
     assert event.request_id == "req-create"
     assert "body" not in event.metadata_
 
 
 def test_authorization_denial_emits_audit_event(db: Session, seed: SeedData) -> None:
     created = MemoryEntryService(db).create_memory(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id), request=memory_request()
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id), request=memory_request()
     )
     with pytest.raises(NotFoundError):
         MemoryEntryService(db).get_memory(
-            actor=actor(org_id=seed.org.id, user_id=seed.fabio.id), memory_id=created.id
+            actor=actor(org_id=seed.org.id, user_id=seed.riley.id), memory_id=created.id
         )
     event = db.execute(
         select(AuditEvent).where(AuditEvent.action == "authorization.denied")
@@ -44,7 +44,7 @@ def test_authorization_denial_emits_audit_event(db: Session, seed: SeedData) -> 
 
 def test_search_audit_metadata_excludes_raw_query(db: Session, seed: SeedData) -> None:
     SearchService(db).search(
-        actor=actor(org_id=seed.org.id, user_id=seed.pablo.id),
+        actor=actor(org_id=seed.org.id, user_id=seed.morgan.id),
         request=SearchRequest(query="secret customer payment issue", limit=10),
     )
     event = db.execute(

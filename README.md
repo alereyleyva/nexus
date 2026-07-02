@@ -81,8 +81,8 @@ bun install
 bun run dev   # http://localhost:5173, talks to the API at http://localhost:8000
 ```
 
-Sign in on the web login page with a seeded email such as `pablo@aircury.com`
-(maintainer/admin), `fabio@aircury.com` (contributor), or `carlos@aircury.com`
+Sign in on the web login page with a seeded email such as `avery.stone@example.com`
+(org admin), `morgan.reed@example.com` (contributor), or `priya.nair@example.com`
 (viewer). Dev-login only works when `NEXUS_DEV_LOGIN=true` and never runs in
 production, where Google OIDC is the login path.
 
