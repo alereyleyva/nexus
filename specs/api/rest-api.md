@@ -211,6 +211,8 @@ Initial sort orders:
 
 Admin endpoints require `org_memberships.is_org_admin = true`. If the auth session is restricted, it must also include `admin:manage`.
 
+The **first** organization and its initial admin cannot be created through these endpoints (they require an existing admin, and login rejects unknown users). They are bootstrapped out-of-band with the operator command `scripts/bootstrap_org.py`, which creates an organization and an active `is_org_admin = true` user directly against the database. It is idempotent and safe to re-run (e.g. to recover admin access). See the [production runbook](../../standards/deployment.md#bootstrap-the-first-organization-and-admin). Adding further people is done through the admin endpoints below.
+
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/v1/admin/users` | List organization users. |

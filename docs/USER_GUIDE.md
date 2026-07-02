@@ -449,6 +449,10 @@ Key operational rules:
 - The API image **does not** run migrations at startup — a one-shot **Fargate
   migrate task** (same image, `alembic upgrade head`) runs as a **discrete step**,
   before traffic shifts.
+- A brand-new deployment has no accounts, and login rejects unknown users, so
+  bootstrap the first org and admin once with `scripts.bootstrap_org` (a one-shot
+  task after migrations). That admin then adds everyone else through the admin API
+  or web app. See the [production runbook](../standards/deployment.md#bootstrap-the-first-organization-and-admin).
 - Secrets (`DATABASE_URL`, `NEXUS_TOKEN_SECRET`, `NEXUS_OIDC_CLIENT_SECRET`) live in
   **SSM Parameter Store (`SecureString`)** and are **resolved at runtime** — never
   plaintext in the Lambda definition or env vars. The OIDC client secret is

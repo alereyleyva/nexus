@@ -185,6 +185,29 @@ aws ecs run-task \
 Migrations are additive and reviewed per `standards/database-migrations.md`. With
 concurrent API executions, run the single migration step first, then shift traffic.
 
+## Bootstrap the first organization and admin
+
+The admin API requires an existing org admin, and OIDC login rejects unknown
+emails — so a fresh database cannot onboard anyone through the API. Break the
+cycle once per organization with `scripts/bootstrap_org.py`, run as a discrete
+one-shot Fargate task that reuses the API image and `DATABASE_URL` (the same
+placement and SSM/KMS grants as the migrate task), after migrations have run:
+
+```sh
+uv run python -m scripts.bootstrap_org \
+  --org-slug acme --org-name "Acme" \
+  --admin-email admin@acme.example --admin-name "Acme Admin"
+```
+
+It creates the organization plus one active user with `is_org_admin = true`
+(knowledge role `knowledge_admin` by default; override with `--role`). It is
+idempotent: an existing org/user is reused, the user is reactivated, and the
+org-admin membership is ensured — so it is safe to re-run, including to recover
+from an admin lockout. `--admin-email` must match the identity the admin signs in
+with (their Google account in production). After bootstrap, that admin adds and
+manages everyone else through the admin API or the web app; this command is not
+part of onboarding additional people.
+
 ## Provisioning with CDK
 
 Infrastructure lives in `infra/` as a **CDK app in TypeScript** (see
@@ -262,6 +285,9 @@ PostgreSQL is the single source of truth; back it up accordingly.
 3. Confirm `NEXUS_DEV_LOGIN` is unset.
 4. `bunx cdk deploy --all` from `infra/` (review `bunx cdk diff` first).
 5. Run the migrate Fargate task (`alembic upgrade head`) as a discrete step.
-6. Shift the API alias to the new version; verify `/health/ready` returns 200.
-7. Invalidate the CloudFront cache if the SPA changed.
-8. Smoke-test OIDC login through the SPA.
+6. For a brand-new deployment only, bootstrap the first org and admin
+   (`scripts.bootstrap_org`) as a one-shot task — see
+   [Bootstrap the first organization and admin](#bootstrap-the-first-organization-and-admin).
+7. Shift the API alias to the new version; verify `/health/ready` returns 200.
+8. Invalidate the CloudFront cache if the SPA changed.
+9. Smoke-test OIDC login through the SPA.
