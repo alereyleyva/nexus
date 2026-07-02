@@ -58,7 +58,15 @@ class AuthService:
         self._oidc_provider = oidc_provider
 
     def providers(self) -> list[dict[str, str]]:
-        return [{"id": "google", "label": "Google", "type": "oidc"}]
+        available: list[dict[str, str]] = []
+        if self._oidc_configured():
+            available.append({"id": "google", "label": "Google", "type": "oidc"})
+        if self._settings.dev_login_enabled:
+            available.append({"id": "dev", "label": "Dev login", "type": "dev"})
+        return available
+
+    def _oidc_configured(self) -> bool:
+        return bool(self._settings.oidc_client_id and self._settings.oidc_client_secret)
 
     def start_cli_authorization(
         self,
@@ -310,9 +318,11 @@ class AuthService:
             raise BadRequestError("The redirect_uri is not allowed.")
         provider_client = self._require_oidc_provider()
         nonce = generate_token("nonce", bytes_count=16)
+        # The web client's callback (where we finally deliver the login_code) is carried
+        # in state; Google redirects to our own callback so we can exchange the code.
         state = self._encode_oidc_state(redirect_uri=redirect_uri, nonce=nonce)
         return provider_client.build_authorization_url(
-            redirect_uri=redirect_uri, state=state, nonce=nonce
+            redirect_uri=self._oidc_callback_url(provider), state=state, nonce=nonce
         )
 
     def complete_oidc_login(self, *, provider: str, code: str, state: str) -> str:
@@ -321,7 +331,7 @@ class AuthService:
         provider_client = self._require_oidc_provider()
         try:
             identity = provider_client.exchange_code(
-                code=code, redirect_uri=redirect_uri, nonce=nonce
+                code=code, redirect_uri=self._oidc_callback_url(provider), nonce=nonce
             )
         except OidcError:
             return self._login_redirect(redirect_uri, error="oidc_exchange_failed")
@@ -388,10 +398,15 @@ class AuthService:
         if provider != "google":
             raise NotFoundError("auth provider")
 
+    def _oidc_callback_url(self, provider: str) -> str:
+        """The API's own OAuth callback — this is what must be registered with the provider."""
+        base = self._settings.public_base_url.rstrip("/")
+        return f"{base}/v1/auth/oidc/{provider}/callback"
+
     def _require_oidc_provider(self) -> OidcProvider:
         if self._oidc_provider is not None:
             return self._oidc_provider
-        if not self._settings.oidc_client_id or not self._settings.oidc_client_secret:
+        if not self._oidc_configured():
             raise NotFoundError("auth provider")
         return build_google_provider(
             client_id=self._settings.oidc_client_id,

@@ -70,8 +70,10 @@ uv run alembic upgrade head
 # 2. Seed a demo org, users, projects, and memory
 uv run python -m scripts.seed_dev
 
-# 3. API (with local dev-login enabled)
-NEXUS_DEV_LOGIN=true uv run uvicorn app.main:app --reload
+# 3. API — config comes from a repo-root .env (copy .env.example to .env first).
+#    The API loads .env automatically in development; set NEXUS_DEV_LOGIN=true
+#    and/or the NEXUS_OIDC_* Google credentials there to enable each login method.
+uv run uvicorn app.main:app --reload
 
 # 4. Web client (separate terminal)
 cd web

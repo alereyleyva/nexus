@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -10,6 +11,33 @@ from pydantic import BaseModel, ConfigDict, Field
 # parameters resolved (and decrypted) at runtime, e.g. `ssm:/nexus/prod/token-secret`.
 # This keeps secret values out of the Lambda definition and env vars (ADR-0013).
 SSM_PREFIX = "ssm:"
+
+_DOTENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+
+
+def _load_local_env_file() -> None:
+    """Populate os.environ from a repo-root .env file for local development.
+
+    Real environment variables always win (we never overwrite an existing key),
+    so this is a no-op in production, where secrets come from the platform / SSM
+    and no .env file is deployed.
+    """
+    try:
+        content = _DOTENV_PATH.read_text(encoding="utf-8")
+    except OSError:
+        return
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, separator, value = line.partition("=")
+        key = key.strip()
+        if not separator or not key or key in os.environ:
+            continue
+        os.environ[key] = value.strip().strip('"').strip("'")
+
+
+_load_local_env_file()
 
 
 class Settings(BaseModel):

@@ -42,6 +42,12 @@ export interface PageInfo {
   has_more: boolean;
 }
 
+export interface AuthProvider {
+  id: string;
+  label: string;
+  type: string;
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;

@@ -2,7 +2,7 @@ import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { BookMarked } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { oidcAuthorizeUrl } from "@/api/auth";
+import { fetchProviders, oidcAuthorizeUrl } from "@/api/auth";
 import { ApiError } from "@/api/client";
 import { useAuth } from "@/auth/auth";
 import { stashPostLoginRedirect, takePostLoginRedirect } from "@/auth/redirect";
@@ -33,25 +33,45 @@ function goAfterLogin(navigate: (opts: { to: "/memory" }) => Promise<void>): voi
 }
 
 const DEMO_USERS = [
-  { email: "pablo@aircury.com", role: "Maintainer · Admin" },
-  { email: "fabio@aircury.com", role: "Contributor" },
-  { email: "carlos@aircury.com", role: "Viewer" },
+  { email: "avery.stone@example.com", role: "Org Admin" },
+  { email: "morgan.reed@example.com", role: "Contributor" },
+  { email: "priya.nair@example.com", role: "Viewer" },
 ];
 
 function LoginPage() {
   const { status, login } = useAuth();
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
-  const [email, setEmail] = useState("pablo@aircury.com");
+  const [email, setEmail] = useState("avery.stone@example.com");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [providerIds, setProviderIds] = useState<string[] | null>(null);
 
   useEffect(() => {
     stashPostLoginRedirect(redirect);
   }, [redirect]);
 
+  useEffect(() => {
+    let active = true;
+    fetchProviders()
+      .then(({ providers }) => {
+        if (active) setProviderIds(providers.map((provider) => provider.id));
+      })
+      .catch(() => {
+        if (active) setProviderIds([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   if (status === "loading") return <LoginFrame><LoadingBlock label="Checking session…" /></LoginFrame>;
   if (status === "authenticated") return <Navigate to="/memory" />;
+  if (providerIds === null)
+    return <LoginFrame><LoadingBlock label="Loading sign-in options…" /></LoginFrame>;
+
+  const googleEnabled = providerIds.includes("google");
+  const devEnabled = providerIds.includes("dev");
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -78,48 +98,63 @@ function LoginPage() {
 
   return (
     <LoginFrame>
-      <Button type="button" variant="primary" className="w-full" onClick={signInWithGoogle}>
-        Sign in with Google
-      </Button>
-      <div className="my-5 flex items-center gap-3 text-xs text-text-muted">
-        <span className="h-px flex-1 bg-surface-tint" />
-        <span className="eyebrow">or dev login</span>
-        <span className="h-px flex-1 bg-surface-tint" />
-      </div>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Field label="Email">
-          <Input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@aircury.com"
-            autoFocus
-            required
-          />
-        </Field>
-        {error && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-        )}
-        <Button type="submit" variant="cta" disabled={submitting}>
-          {submitting ? "Signing in…" : "Sign in"}
+      {googleEnabled && (
+        <Button type="button" variant="primary" className="w-full" onClick={signInWithGoogle}>
+          Sign in with Google
         </Button>
-      </form>
-      <div className="mt-6 border-t border-surface-tint pt-4">
-        <p className="eyebrow mb-2 text-text-muted">Seeded demo users</p>
-        <div className="flex flex-col gap-1">
-          {DEMO_USERS.map((user) => (
-            <button
-              key={user.email}
-              type="button"
-              onClick={() => setEmail(user.email)}
-              className="transition-signature flex items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-tint"
-            >
-              <span className="font-medium text-primary">{user.email}</span>
-              <span className="text-xs text-text-muted">{user.role}</span>
-            </button>
-          ))}
+      )}
+      {googleEnabled && devEnabled && (
+        <div className="my-5 flex items-center gap-3 text-xs text-text-muted">
+          <span className="h-px flex-1 bg-surface-tint" />
+          <span className="eyebrow">or dev login</span>
+          <span className="h-px flex-1 bg-surface-tint" />
         </div>
-      </div>
+      )}
+      {devEnabled && (
+        <>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <Field label="Email">
+              <Input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                autoFocus
+                required
+              />
+            </Field>
+            {error && (
+              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+            )}
+            <Button type="submit" variant="cta" disabled={submitting}>
+              {submitting ? "Signing in…" : "Sign in"}
+            </Button>
+          </form>
+          <div className="mt-6 border-t border-surface-tint pt-4">
+            <p className="eyebrow mb-2 text-text-muted">Seeded demo users</p>
+            <div className="flex flex-col gap-1">
+              {DEMO_USERS.map((user) => (
+                <button
+                  key={user.email}
+                  type="button"
+                  onClick={() => setEmail(user.email)}
+                  className="transition-signature flex items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-tint"
+                >
+                  <span className="font-medium text-primary">{user.email}</span>
+                  <span className="text-xs text-text-muted">{user.role}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+      {!googleEnabled && !devEnabled && (
+        <p className="rounded-md bg-surface-tint px-3 py-2 text-sm text-text-muted">
+          No sign-in methods are configured. Set <code>NEXUS_OIDC_CLIENT_ID</code>/
+          <code>NEXUS_OIDC_CLIENT_SECRET</code> for Google, or <code>NEXUS_DEV_LOGIN=true</code>{" "}
+          for dev login, then restart the API.
+        </p>
+      )}
     </LoginFrame>
   );
 }

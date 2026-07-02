@@ -1,10 +1,17 @@
 import { API_URL, apiRequest } from "@/api/client";
 import type {
   ActorContext,
+  AuthProvider,
   CliAuthorizationDecision,
   CliAuthorizationView,
   TokenResponse,
 } from "@/api/types";
+
+export function fetchProviders(): Promise<{ providers: AuthProvider[] }> {
+  return apiRequest<{ providers: AuthProvider[] }>("/v1/auth/providers", {
+    retryOnUnauthorized: false,
+  });
+}
 
 export function devLogin(email: string): Promise<TokenResponse> {
   return apiRequest<TokenResponse>("/v1/auth/web/dev-login", {
